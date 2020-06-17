@@ -57,7 +57,6 @@ class RenderTable
     public function renderHtml($xbrl, $import = NULL, $lang = NULL, $additional = array())
     {
 
-
         $this->specification = $xbrl;
         $this->roleType = array_keys($this->specification['def']);
 
