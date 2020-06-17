@@ -9,7 +9,7 @@
         "DPM",
         "XBRL"
     ],
-    "license": "MIT",
+    "license": "BSD-3-Clause",
     "homepage": "https://areport.net",
     "authors": [
         {
