@@ -9,7 +9,6 @@
 namespace AReportDpmXBRL;
 
 use AReportDpmXBRL\Config\Config;
-
 use AReportDpmXBRL\Render\Axis;
 use AReportDpmXBRL\Render\RenderExport;
 use AReportDpmXBRL\Render\RenderOutput;
@@ -30,7 +29,17 @@ class Render
     //put your code here
     private $tax;
     private $filename;
-    private $path = array();
+    private $lang = null;
+    private $path = [];
+    private $additionalData = [];
+
+
+    public function __construct($tax, $lang, $additionalData)
+    {
+        $this->tax = $tax;
+        $this->lang = $lang;
+        $this->additionalData = $additionalData;
+    }
 
 
     public function getTableID($tax)
@@ -58,7 +67,6 @@ class Render
         endif;
         return new RenderOutput($tax, $lang, $type, $additionalData);
     }
-
 
 
 }
