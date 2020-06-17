@@ -18,7 +18,7 @@ use AReportDpmXBRL\Module\Presentation;
 /**
  * Class LinkBase
  * @category
- * Areport @package DpmXbrl
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

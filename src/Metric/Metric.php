@@ -18,7 +18,7 @@ use AReportDpmXBRL\Library\Format;
 /**
  * Class Metric
  * @category
- * Areport @package DpmXbrl\Metric
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

@@ -17,7 +17,7 @@ use AReportDpmXBRL\XbrlInterface;
 /**
  * Class DefinitionLink
  * @category
- * Areport @package DpmXbrl\Link
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

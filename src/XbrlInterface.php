@@ -9,9 +9,10 @@
 namespace AReportDpmXBRL;
 
 /**
- * Description of XbrlInterface
- *
- * @author begicf
+ * Interface XbrlInterface
+ * Areport @package AReportDpmXBRL\Config
+ * @author Fuad Begic <fuad.begic@gmail.com>
+ * Date: 12/06/2020
  */
 interface XbrlInterface {
     //put your code here

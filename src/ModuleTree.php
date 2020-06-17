@@ -21,7 +21,7 @@ use AReportDpmXBRL\Library\Normalise;
 /**
  * Class Mod
  * @category
- * Areport @package DpmXbrl
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

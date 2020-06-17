@@ -11,7 +11,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Pdf;
 /**
  * Class ExtendMpdf
  * @category
- * Areport @package DpmXbrl\Helper
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

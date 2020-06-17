@@ -11,7 +11,7 @@ namespace AReportDpmXBRL\Config;
 /**
  * Class Config
  * @category
- * Areport @package DpmXbrl\Config
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

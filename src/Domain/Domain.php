@@ -17,7 +17,7 @@ use AReportDpmXBRL\Library\Format;
 /**
  * Class Domain
  * @category
- * Areport @package DpmXbrl\Domain
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */

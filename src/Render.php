@@ -20,7 +20,7 @@ use AReportDpmXBRL\Render\RenderTable;
 /**
  * Class Tax
  * @category
- * Areport @package DpmXbrl
+ * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */
