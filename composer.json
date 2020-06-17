@@ -1,5 +1,5 @@
 {
-    "name": "begicf/AReportDpmXBRL",
+    "name": "begicf/areport-dpm-xbrl",
     "type": "library",
     "description": "AreportDpmXBRL is a package for parsing XBRL taxonomy which is created by EU standards",
     "keywords": [
