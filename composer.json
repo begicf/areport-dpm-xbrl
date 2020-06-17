@@ -1,0 +1,32 @@
+{
+    "name": "begicf/AReportDpmXBRL",
+    "type": "library",
+    "description": "AreportDpmXBRL is a package for parsing XBRL taxonomy which is created by EU standards",
+    "keywords": [
+        "packaging",
+        "adaptiv",
+        "report",
+        "DPM",
+        "XBRL"
+    ],
+    "license": "MIT",
+    "homepage": "https://areport.net",
+    "authors": [
+        {
+            "name": "Fuad Begic",
+            "email": "fuad.begic@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.2.5",
+        "mpdf/mpdf": "^8.0",
+        "phpoffice/phpspreadsheet": "^1.13"
+    },
+    "autoload": {
+        "psr-4": {
+            "AReportDpmXBRL\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
