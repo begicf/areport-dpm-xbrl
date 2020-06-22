@@ -815,7 +815,7 @@ class RenderOutput
 
 
                     break;
-
+                case 'enum:enumerationItemType':
                 case 'xbrli:QNameItemType':
 
                     foreach ($def['presentation'] as $row):
