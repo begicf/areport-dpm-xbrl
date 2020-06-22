@@ -799,7 +799,7 @@ class RenderOutput
 
         $offsetMerge = (isset($this->_aspectNode['y'])) ? count($this->col) : 2 + $this->_col;
         $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 1, $this->tableVerboseName())->mergeCellsByColumnAndRow(1, 1, $offsetMerge, 1);
-        //$this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 2, '')->mergeCellsByColumnAndRow(1, 2, $offsetMerge, 2);
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 2, 'Period: ' . $this->_additionalData['period'])->mergeCellsByColumnAndRow(1, 2, $offsetMerge, 2);
 
     }
 
