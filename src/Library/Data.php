@@ -27,7 +27,7 @@ class Data
     {
 
 
-        $_tax = array();
+        $_tax = [];
         $tax = new Set($path, $config, $assertion);
 
 

@@ -208,17 +208,7 @@ class Set
         endif;
     }
 
-    public function render()
-    {
 
-        return new RenderTable();
-    }
-
-    public function export()
-    {
-
-        return new RenderOutput();
-    }
 
 
 
