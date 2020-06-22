@@ -59,6 +59,7 @@ class Render
         return new RenderTable();
     }
 
+
     public function export($tax, $lang, $type, $additionalData)
     {
 
