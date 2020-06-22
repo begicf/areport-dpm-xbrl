@@ -34,7 +34,7 @@ class Render
     private $additionalData = [];
 
 
-    public function __construct($tax, $lang, $additionalData)
+    public function __construct($tax = null, $lang = null, $additionalData = nullls)
     {
         $this->tax = $tax;
         $this->lang = $lang;
