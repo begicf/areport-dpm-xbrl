@@ -1,4 +1,6 @@
-Copyright (c) 2011-2018 by Begic Fuad.
+BSD 2-Clause License
+
+Copyright (c) 2020 by Begic Fuad.
 
 Some rights reserved.
 
