@@ -28,7 +28,7 @@ class CreateXBRLFromDB extends XMLWriter
 
     private $context;
     private $date;
-    private $organisation = '529900CEJZKMQ4AKBF28';
+    private $organisation = '12345678912345678912';
     private $schemaRef;
     private $fIndicators;
     private $tempContext = array();
@@ -430,7 +430,7 @@ class CreateXBRLFromDB extends XMLWriter
 
                             if (is_numeric($row['sheetcode'])):
                                 $this->writeAttribute('decimals', '-3');
-                                $this->writeAttribute('unitRef', 'uBAM');
+                                $this->writeAttribute('unitRef', 'u' . Config::$monetaryItem);
                                 $this->writeRaw($row['numeric_value'] * 1000);
                             else:
 
