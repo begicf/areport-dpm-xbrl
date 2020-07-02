@@ -204,5 +204,25 @@ class DomToArray
         return false;
     }
 
+    /**
+     * @param $array
+     * @return array|bool
+     */
+    public static function multidimensional_arr_to_single($array)
+    {
+        if (!is_array($array)) {
+            return FALSE;
+        }
+        $result = [];
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $result = array_merge($result, self::array_flatten($value));
+            } else {
+                $result[$key] = $value;
+            }
+        }
+        return $result;
+    }
+
 
 }

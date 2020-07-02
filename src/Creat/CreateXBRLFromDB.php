@@ -3,9 +3,9 @@
 namespace AReportDpmXBRL\Creat;
 
 use AReportDpmXBRL\Config\Config;
-use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Data;
-use AReportDpmXBRLl\Set;
+use AReportDpmXBRL\Library\DomToArray;
+use AReportDpmXBRL\Set;
 use XMLWriter;
 
 /*
@@ -38,6 +38,7 @@ class CreateXBRLFromDB extends XMLWriter
     private $namespace = array();
     private $typedMember;
     private $aspectNode = array();
+    private $moduleDir;
 
     private $defaultMI;
 
@@ -49,13 +50,14 @@ class CreateXBRLFromDB extends XMLWriter
      * @param type $fIndicators
      * @param type $imports
      */
-    public function __construct($data, $schemaRef, $context, $fIndicators)
+    public function __construct($data, $schemaRef, $context, $fIndicators = null, $moduleDir = null)
     {
 
         $this->date = $data;
         $this->schemaRef = $schemaRef;
         $this->context = $context;
         $this->fIndicators = $fIndicators;
+        $this->moduleDir = $moduleDir;
 
         $this->defaultMI = Config::$monetaryItem;
     }
@@ -85,7 +87,7 @@ class CreateXBRLFromDB extends XMLWriter
         $this->setIndent(true);
         $this->setIndentString(' ');
         $this->startDocument('1.0', 'UTF-8');
-        $this->writeComment('FBA v.1.0');
+        $this->writeComment('AREPORT v.1.0');
     }
 
     private function traverseArray($array, $target = NULL)
@@ -139,21 +141,24 @@ class CreateXBRLFromDB extends XMLWriter
 
 
         $tax = array();
-        foreach ($this->fIndicators as $k => $rows):
+        if (!is_null($this->fIndicators)):
+            foreach ($this->fIndicators as $k => $rows):
 
-            $xbrl = new Set(Config::publicDir() . $rows, Config::$createInstance);
+                $xbrl =
+                    new Set(Config::publicDir() . $this->moduleDir . DIRECTORY_SEPARATOR . $rows, Config::$createInstance);
 
-            $tax[$k]['targetNamespace'] = $xbrl->getTargetNamespace();
-            foreach ($xbrl->load() as $key => $row):
+                $tax[$k]['targetNamespace'] = $xbrl->getTargetNamespace();
+                foreach ($xbrl->load() as $key => $row):
 
-                $tax[$k][$key] = $row->Xbrl;
+                    $tax[$k][$key] = $row->Xbrl;
 
+
+                endforeach;
 
             endforeach;
 
-        endforeach;
-
-        $this->traverseArray($tax);
+            $this->traverseArray($tax);
+        endif;
 
 
         ksort($this->namespace);
@@ -250,9 +255,9 @@ class CreateXBRLFromDB extends XMLWriter
                 case $this->defaultMI:
                     $this->startElementNS('xbrli', 'unit', NULL);
                     $this->writeAttribute(
-                        'id', 'uBAM'
+                        'id', 'uEUR'
                     );
-                    $this->writeElementNs('xbrli', 'measure', NULL, 'iso4217:BAM');
+                    $this->writeElementNs('xbrli', 'measure', NULL, 'iso4217:EUR');
                     $this->endElement();
                     break;
                 case 'upure':
@@ -467,7 +472,8 @@ class CreateXBRLFromDB extends XMLWriter
         $this->startElementNS('find', 'fIndicators', NULL);
 
 
-        $module = new Set(Config::publicDir() . $this->schemaRef, Config::$moduleSet);
+        $module =
+            new Set(Config::publicDir() . $this->moduleDir . DIRECTORY_SEPARATOR . $this->schemaRef, Config::$moduleSet);
 
 
         $mod = array();
