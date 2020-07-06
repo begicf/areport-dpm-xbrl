@@ -75,7 +75,7 @@ class ReadExcel
 
         $el = end($args);
 
-        if (empty($el['typ_table'])):
+        if (empty($el['typ_table']) || $el['typ_table'] == 'null'):
             $X = array_slice($this->sheetData[$el['rowspan'] + 3], 2, $el['column'] + 1);
             $rcY = count($this->sheetData);
 
