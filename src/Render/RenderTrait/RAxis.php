@@ -1,6 +1,6 @@
 <?php
 
-namespace AReportDpmXBRL\Render;
+namespace AReportDpmXBRL\Render\RenderTrait;
 
 use AReportDpmXBRL\Config\Config;
 use AReportDpmXBRL\Library\Data;
@@ -20,35 +20,8 @@ use AReportDpmXBRL\Library\Format;
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */
-class Axis
+trait RAxis
 {
-
-    //put your code here
-    private $specification;
-    private $lang;
-
-    public function __construct($spec, $lang = NULL)
-    {
-        $this->specification = $spec;
-
-
-        if (is_null($lang)):
-
-            $keys = array_keys($this->specification);
-
-            foreach (Config::$lang as $row):
-
-                $needle = 'lab-' . $row;
-                if (in_array($needle, $keys)):
-                    $lang = $needle;
-                    break;
-                endif;
-
-            endforeach;
-
-            $this->lang = $lang;
-        endif;
-    }
 
     public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array())
     {
@@ -283,7 +256,6 @@ class Axis
 
         switch ($role):
             case 'http://www.xbrl.org/2008/role/label':
-
 
                 $found =
                     Data::searchLabel($this->specification[$this->lang], 'href', Format::getAfterSpecChar($value, '_'));

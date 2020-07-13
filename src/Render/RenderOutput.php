@@ -14,14 +14,15 @@ use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Library\Directory;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Format;
+use AReportDpmXBRL\Render\RenderTrait\RAxis;
+use AReportDpmXBRL\Render\RenderTrait\RExcel;
+use AReportDpmXBRL\Render\RenderTrait\RTrait;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
@@ -34,15 +35,20 @@ use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
  */
 class RenderOutput
 {
+    use RTrait {
+        RTrait::__construct as private __RtraitConstruct;
+    }
+
+    use RAxis;
+
+    use RExcel;
 
 //put your code here
 
-    private $specification;
     private $roleType = array();
     private $breakdownTreeArc;
     private $row = array();
     private $col = array();
-    private $lang;
     private $import;
     private $spreadsheet;
     private $_colOffset = 0; // not working properly
@@ -53,11 +59,11 @@ class RenderOutput
     private $_colSpanMax;
     private $_rowSpanMax;
     private $_type = 'xlsx';
-    private $_additionalData;
     private $_orientationColumnIndex = 4;
 
     public function __construct($xbrl, $lang, $type, $additionalData)
     {
+        $this->__RtraitConstruct($xbrl, $lang,$additionalData);
 
         $this->spreadsheet = new Spreadsheet();
 
@@ -81,56 +87,19 @@ class RenderOutput
 
         $this->_type = $type;
 
-        $this->_additionalData = $additionalData;
 
-        $this->setLang($lang);
 
-        $this->axis = new Axis($this->specification, $this->lang);
+      //  $this-> = new Axis($this->specification, $this->lang);
 
-        $this->tableNameId();
 
 
         $this->breakdownTreeArc =
-            $this->axis->searchLabel($this->_tableNameId, 'http://xbrl.org/arcrole/PWD/2013-05-17/table-breakdown');
+            $this->searchLabel($this->_tableNameId, 'http://xbrl.org/arcrole/PWD/2013-05-17/table-breakdown');
 
         $this->setAspectNode();
     }
 
     /**
-     *
-     */
-    public function tableNameId()
-    {
-
-        $this->_tableNameId = key($this->specification['rend']['table']);
-    }
-
-    /**
-     * @return string|null
-     */
-    public function tableLabelName(): ?string
-    {
-
-        return $tableLabelName = $this->specification['rend']['table'][$this->_tableNameId]['label'];
-    }
-
-    /**
-     * @return string|null
-     */
-    public function tableName(): ?string
-    {
-        return $this->axis->searchLabel($this->tableLabelName(), 'http://www.xbrl.org/2008/role/label');
-    }
-
-    /**
-     * @return string|null
-     */
-    public function tableVerboseName(): ?string
-    {
-
-        return $this->axis->searchLabel($this->tableLabelName(), 'http://www.xbrl.org/2008/role/verboseLabel');
-
-    }
 
     /**
      *
@@ -140,7 +109,7 @@ class RenderOutput
     {
 
 
-        return $this->axis->buildXAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['x'])['to']);
+        return $this->buildXAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['x'])['to']);
     }
 
     /**
@@ -156,7 +125,7 @@ class RenderOutput
 
         else:
 
-            return $this->axis->buildYAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['y'])['to']);
+            return $this->buildYAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['y'])['to']);
         endif;
     }
 
@@ -167,7 +136,7 @@ class RenderOutput
     {
 
         if (isset($this->breakdownTreeArc['z'])):
-            return $this->axis->buildZAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['z'])['to']);
+            return $this->buildZAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['z'])['to']);
         endif;
     }
 
@@ -305,7 +274,7 @@ class RenderOutput
                 $addInformation['tablename'] = $this->tableVerboseName();
 
 
-                $this->outputPDF($this->spreadsheet, array_merge($this->_additionalData, $addInformation));
+                $this->outputPDF($this->spreadsheet, array_merge($this->additionalData, $addInformation));
                 break;
             case 'html':
                 $writer = IOFactory::createWriter($this->spreadsheet, 'Html');
@@ -407,12 +376,12 @@ class RenderOutput
 
             //Rc-code
             $this->col[$this->_col]['rc-code'] = $rcCode =
-                $this->axis->searchLabel($this->specification['rend']['path'] . "#" . $this_value['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
+                $this->searchLabel($this->specification['rend']['path'] . "#" . $this_value['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
             $this->col[$this->_col]['id'] = $this_value['to'];
             $this->col[$this->_col]['abstract'] = $this_value['abstract'];
 
             $this_value['row'] = $this_value['row'] + $this->_rowOffset;
-            $lebelName = $this->axis->searchLabel($this_value['to'], 'http://www.xbrl.org/2008/role/label');
+            $lebelName = $this->searchLabel($this_value['to'], 'http://www.xbrl.org/2008/role/label');
             if (isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'):
 
                 $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $lebelName);
@@ -476,7 +445,7 @@ class RenderOutput
             $explicitDimension = current($this->specification['rend']['explicitDimension']);
 
             $domain =
-                Domain::getDomain($explicitDimension['linkrole'], Directory::getRootName($this->_additionalData['file_path']));
+                Domain::getDomain($explicitDimension['linkrole'], Directory::getRootName($this->additionalData['file_path']));
 
 
             foreach ($domain as $row):
@@ -492,8 +461,8 @@ class RenderOutput
             foreach ($ZAxis as $row):
 
                 $key =
-                    $this->axis->searchLabel($this->specification['rend']['path'] . "#" . $row['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
-                $z[$key] = $this->axis->searchLabel($row['to'], 'http://www.xbrl.org/2008/role/label');
+                    $this->searchLabel($this->specification['rend']['path'] . "#" . $row['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
+                $z[$key] = $this->searchLabel($row['to'], 'http://www.xbrl.org/2008/role/label');
             endforeach;
             return $z;
 
@@ -514,7 +483,7 @@ class RenderOutput
             $explicitDimension = current($this->specification['rend']['explicitDimension']);
 
             $domain =
-                Domain::getDomain($explicitDimension['linkrole'], Directory::getRootName($this->_additionalData['file_path']));
+                Domain::getDomain($explicitDimension['linkrole'], Directory::getRootName($this->additionalData['file_path']));
 
             $zContent = null;
 
@@ -532,11 +501,11 @@ class RenderOutput
 
             foreach ($ZAxis as $row):
                 $rcCode =
-                    $this->axis->searchLabel($this->specification['rend']['path'] . "#" . $row['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
+                    $this->searchLabel($this->specification['rend']['path'] . "#" . $row['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
 
                 if ($rcCode === $this->import['sheet']):
 
-                    $zContent = $this->axis->searchLabel($row['to'], 'http://www.xbrl.org/2008/role/label');
+                    $zContent = $this->searchLabel($row['to'], 'http://www.xbrl.org/2008/role/label');
 
 
                 endif;
@@ -562,9 +531,9 @@ class RenderOutput
 
             foreach ($contents as $key => $row):
 
-                $labelName = $this->axis->searchLabel($row['to'], 'http://www.xbrl.org/2008/role/label');
+                $labelName = $this->searchLabel($row['to'], 'http://www.xbrl.org/2008/role/label');
                 $this->row[$y]['rc-code'] = $rcCode =
-                    $this->axis->searchLabel($this->specification['rend']['path'] . "#" . $row['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
+                    $this->searchLabel($this->specification['rend']['path'] . "#" . $row['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
                 $this->row[$y]['id'] = $row['to'];
                 $this->row[$y]['abstract'] = $row['abstract'];
 
@@ -612,10 +581,10 @@ class RenderOutput
             foreach ($this->specification['rend']['aspectNode'] as $aspect):
 
                 $from =
-                    $this->axis->searchLabel($aspect['id'], 'http://xbrl.org/arcrole/PWD/2013-05-17/breakdown-tree');
+                    $this->searchLabel($aspect['id'], 'http://xbrl.org/arcrole/PWD/2013-05-17/breakdown-tree');
                 $this->row[$y]['rc-code'] = $rcCode =
-                    $this->axis->searchLabel($this->specification['rend']['path'] . "#" . $from, 'http://www.eurofiling.info/xbrl/role/rc-code');
-                $this->row[$y]['labelName'] = $this->axis->searchLabel($from, 'http://www.xbrl.org/2008/role/label');
+                    $this->searchLabel($this->specification['rend']['path'] . "#" . $from, 'http://www.eurofiling.info/xbrl/role/rc-code');
+                $this->row[$y]['labelName'] = $this->searchLabel($from, 'http://www.xbrl.org/2008/role/label');
 
                 $this->row[$y]['id'] = $aspect['id'];
                 $this->row[$y]['axis'] = 'y';
@@ -638,8 +607,8 @@ class RenderOutput
                 $y++;
                 $name = 'c' . $this->_col['rc-code'] . 'r' . $row['rc-code'];
                 $dim =
-                    $this->axis->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']));
-                $def = $this->axis->checkDef($dim, $name);
+                    $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']));
+                $def = $this->checkDef($dim, $name);
                 $disabled = ($def && $row['abstract'] != 'true' && $this->_col['abstract'] != 'true') ? '' : 'disabled';
 
                 if ($disabled == 'disabled'):
@@ -674,7 +643,7 @@ class RenderOutput
     private function drawOpenContent($s, $XAxis)
     {
         //////OPEN TABLE/////////
-        $maxRow = $this->axis->getMaxRow($this->import);
+        $maxRow = $this->getMaxRow($this->import);
 
         $node = ($this->specification['rend']['aspectNode']);
 
@@ -699,7 +668,7 @@ class RenderOutput
                         $explicitDimension =
                             $this->specification['rend']['explicitDimension'][$this->specification['rend']['aspectNodeFilterArc'][$this->_col['id']]['to']];
                         $this->_col['explicitDimension'] =
-                            Domain::getDomain($explicitDimension['linkrole'], Directory::getRootName($this->_additionalData['file_path']));
+                            Domain::getDomain($explicitDimension['linkrole'], Directory::getRootName($this->additionalData['file_path']));
 
                     else:
                         $IDtyp = Format::getAfterSpecChar($yN['dimensionAspect'], ':');
@@ -724,10 +693,10 @@ class RenderOutput
 
 
                 $dim =
-                    $this->axis->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), $yN, $typ);
+                    $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), $yN, $typ);
 
 
-                $def = $this->axis->checkDef($dim);
+                $def = $this->checkDef($dim);
 
                 $disabled =
                     ($def && isset($this->_col['abstract']) && $this->_col['abstract'] != 'true') ? '' : 'disabled';
@@ -799,7 +768,7 @@ class RenderOutput
 
         $offsetMerge = (isset($this->_aspectNode['y'])) ? count($this->col) : 2 + $this->_col;
         $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 1, $this->tableVerboseName())->mergeCellsByColumnAndRow(1, 1, $offsetMerge, 1);
-        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 2, 'Period: ' . $this->_additionalData['period'])->mergeCellsByColumnAndRow(1, 2, $offsetMerge, 2);
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 2, 'Period: ' . $this->additionalData['period'])->mergeCellsByColumnAndRow(1, 2, $offsetMerge, 2);
 
     }
 
@@ -820,7 +789,7 @@ class RenderOutput
 
                     foreach ($def['presentation'] as $row):
 
-                        if (isset($value['string']) && $this->axis->getHierKey($def['namespace'], $row['href']) === $value['string']):
+                        if (isset($value['string']) && $this->getHierKey($def['namespace'], $row['href']) === $value['string']):
                             $value = $row['@content'];
                         endif;
 
@@ -903,12 +872,6 @@ class RenderOutput
         $pdf->save('php://output');
     }
 
-    private function setLang($lang)
-    {
-        if (!is_null($lang)):
-            $this->lang = $lang;
-        endif;
-    }
 
     private function setImport($import)
     {
@@ -919,243 +882,5 @@ class RenderOutput
         endif;
     }
 
-    private function styleRC()
-    {
-        $styleRC = array(
-            'font' => array(
-                'size' => 10,
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-            ),
-            'fill' => array(
-                'fillType' => Fill::FILL_GRADIENT_LINEAR,
-                'rotation' => 90,
-                'color' => ['rgb' => 'e0ebff']
-            ),
-            'alignment' => array(
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-            ),
-        );
-
-        return $styleRC;
-    }
-
-    private function styleX()
-    {
-
-
-        $styleX = array(
-            'font' => array(
-                'size' => 10,
-                'bold' => false,
-                'align' => 'middle',
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_NONE,
-                ),
-            ),
-            'fill' => array(
-                'fillType' => Fill::FILL_GRADIENT_LINEAR,
-                'rotation' => 90,
-                'color' => ['rgb' => 'F0F0F0']
-            ),
-            'alignment' => array(
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::HORIZONTAL_CENTER,
-            ),
-        );
-        return $styleX;
-    }
-
-    private function styleHeader()
-    {
-        $styleHeader = array(
-            'font' => array(
-                'size' => 12,
-                'bold' => true,
-                'align' => 'middle',
-            ), 'borders' => array(
-                'outline' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                )
-            ),
-            'fill' => array(
-                'fillType' => Fill::FILL_GRADIENT_LINEAR,
-                'rotation' => 90,
-                'color' => ['rgb' => 'F0F0F0']
-            ),
-            'alignment' => array(
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::HORIZONTAL_CENTER,
-            ),
-        );
-
-
-        return $styleHeader;
-    }
-
-    private function styleXFix()
-    {
-
-
-        $styleXFix = array(
-            'font' => array(
-                'size' => 10,
-                'bold' => true,
-                'align' => 'middle',
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_NONE,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_NONE,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_NONE,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_NONE,
-                ),
-            ),
-            'fill' => array(
-                'fillType' => Fill::FILL_GRADIENT_LINEAR,
-                'rotation' => 90,
-                'color' => ['rgb' => 'F0F0F0'],
-            ),
-            'alignment' => array(
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::HORIZONTAL_CENTER,
-            ),
-        );
-        return $styleXFix;
-    }
-
-    private function styleY()
-    {
-
-        $styleY = array(
-            'font' => array(
-                'size' => 10,
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-            ),
-        );
-        return $styleY;
-    }
-
-    private function abstractYBold()
-    {
-
-        $abstractYBold = array(
-            'font' => array(
-                'size' => 10,
-                'bold' => true,
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-            ),
-        );
-        return $abstractYBold;
-    }
-
-    private function styleDisable()
-    {
-
-        $styleDisable = array(
-            'font' => array(
-                'size' => 10,
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-            ),
-            'fill' => array(
-                'fillType' => Fill::FILL_GRADIENT_LINEAR,
-                'rotation' => 90,
-                'color' => ['rgb' => 'DADADA'],
-            ),
-        );
-        return $styleDisable;
-    }
-
-    private function abstractDisable()
-    {
-
-
-        $abstractDisable = array(
-            'font' => array(
-                'size' => 10,
-            ), 'borders' => array(
-                'top' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'right' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'left' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-                'bottom' => array(
-                    'borderStyle' => Border::BORDER_THIN,
-                ),
-            ),
-            'fill' => array(
-                'fillType' => Fill::FILL_GRADIENT_LINEAR,
-                'rotation' => 90,
-                'color' => ['rgb' => 'FFFFFF'],
-            ),
-        );
-        return $abstractDisable;
-    }
 
 }
