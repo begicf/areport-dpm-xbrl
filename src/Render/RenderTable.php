@@ -29,7 +29,6 @@ class RenderTable
 
     //put your code here
 
-
     private $row = array();
     private $col = array();
     private $breakdownTreeArc;
@@ -40,7 +39,6 @@ class RenderTable
     private $sheet;
 
     private $roleType = [];
-
 
     private function setImport($import)
     {
@@ -77,7 +75,6 @@ class RenderTable
         $sheetsHtml = NULL;
         $aspectNode = NULL;
         $explicitDimension = NULL;
-
 
         $tableNameId = key($this->specification['rend']['table']);
 
@@ -283,7 +280,6 @@ class RenderTable
                     $this->row[$y]['id'] = $row['to'];
                     $this->row[$y]['abstract'] = $row['abstract'];
 
-
                     //set rc-code
                     if ($row['abstract'] != 'true'):
                         $body->setCellContents($y, 0, $rcCode);
@@ -345,9 +341,7 @@ class RenderTable
         if (!is_null($aspectNode)):
             /* Open table */
 
-
             $maxRow = $this->getMaxRow($this->import);
-
 
             $node = ($this->specification['rend']['aspectNode']);
 

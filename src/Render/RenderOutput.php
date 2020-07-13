@@ -63,7 +63,7 @@ class RenderOutput
 
     public function __construct($xbrl, $lang, $type, $additionalData)
     {
-        $this->__RtraitConstruct($xbrl, $lang,$additionalData);
+        $this->__RtraitConstruct($xbrl, $lang, $additionalData);
 
         $this->spreadsheet = new Spreadsheet();
 
@@ -87,12 +87,6 @@ class RenderOutput
 
         $this->_type = $type;
 
-
-
-      //  $this-> = new Axis($this->specification, $this->lang);
-
-
-
         $this->breakdownTreeArc =
             $this->searchLabel($this->_tableNameId, 'http://xbrl.org/arcrole/PWD/2013-05-17/table-breakdown');
 
@@ -100,15 +94,11 @@ class RenderOutput
     }
 
     /**
-
-    /**
      *
      * @return type
      */
     public function getXAxis()
     {
-
-
         return $this->buildXAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['x'])['to']);
     }
 
@@ -134,7 +124,6 @@ class RenderOutput
      */
     public function getZAxis()
     {
-
         if (isset($this->breakdownTreeArc['z'])):
             return $this->buildZAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['z'])['to']);
         endif;
@@ -853,7 +842,6 @@ class RenderOutput
         header('Content-Disposition: inline;filename="' . $info['tablename'] . '.pdf"');
         header('Cache-Control: max-age=0');
 
-
         $spreadsheet->getActiveSheet()->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4);
 
         $indexColumn = Coordinate::columnIndexFromString($this->spreadsheet->getActiveSheet()->getHighestDataColumn());
@@ -863,7 +851,6 @@ class RenderOutput
         else:
             $spreadsheet->getActiveSheet()->getPageSetup()->setOrientation(PageSetup::ORIENTATION_PORTRAIT);
         endif;
-
 
         $pdf = new ExtendMpdf($spreadsheet);
 

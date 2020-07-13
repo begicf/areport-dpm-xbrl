@@ -14,7 +14,6 @@ use AReportDpmXBRL\Render\RenderOutput;
 use AReportDpmXBRL\Render\RenderPDF;
 use AReportDpmXBRL\Render\RenderTable;
 use AReportDpmXBRL\Render\RenderTrait\RTrait;
-use Exception;
 
 
 /**
@@ -28,29 +27,7 @@ class Render
 {
     use RTrait;
 
-    //put your code here
-//    private $specification;
     private $filename;
-//    private $lang = null;
-    //private $additionalData = [];
-
-    /**
-     * Render constructor.
-     * @param null $specification
-     * @param null $lang
-     * @param null $additionalData
-     * @throws Exception
-     */
-//    public function __construct($specification = null, $lang = null, $additionalData = null)
-//    {
-//        if (is_null($specification)) {
-//            throw new Exception('Taxonomy is not defined!');
-//        }
-//
-//        $this->specification = $specification;
-//        $this->lang = $lang;
-//        $this->additionalData = $additionalData;
-//    }
 
     /**
      * @return array|mixed
