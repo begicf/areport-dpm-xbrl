@@ -50,12 +50,6 @@ class RenderTable
         endif;
     }
 
-    private function setLang($lang)
-    {
-        if (!is_null($lang)):
-            $this->lang = $lang;
-        endif;
-    }
 
     public function renderHtml($import = NULL)
     {
@@ -96,7 +90,7 @@ class RenderTable
 
                 case 'x':
 
-                    $header =
+                    $XAxis =
                         $this->buildXAxis($this->specification['rend']['definitionNodeSubtreeArc'], key($row));
 
                     break;
@@ -105,10 +99,10 @@ class RenderTable
                     if (isset($this->specification['rend']['aspectNode'][key($row)])):
 
                         $aspectNode = TRUE;
-                        $contents = $this->specification['rend']['aspectNode'];
+                        $YAxis = $this->specification['rend']['aspectNode'];
 
                     else:
-                        $contents =
+                        $YAxis =
                             $this->buildYAxis($this->specification['rend']['definitionNodeSubtreeArc'], key($row));
                     endif;
                     break;
@@ -127,9 +121,10 @@ class RenderTable
 
                     else:
 
-                        $sheets =
+                        $ZAxis =
                             $this->buildZAxis($this->specification['rend']['definitionNodeSubtreeArc'], key($row));
-                        $sheetsHtml = $this->showSheets($sheets);
+
+                        $sheetsHtml = $this->showSheets($ZAxis);
 
                     endif;
                     break;
@@ -140,11 +135,11 @@ class RenderTable
 
 
         // max depth rowspan
-        $rowspanMax = $colspanMax = max(array_column($header, 'row')) + 1;
+        $rowspanMax = $colspanMax = max(array_column($XAxis, 'row')) + 1;
 
         // add two columns for the rc code on the y axis
-        if (!empty($contents) && !isset($aspectNode)):
-            $colspanMax = max(array_column($contents, 'col')) + 2;
+        if (!empty($YAxis) && !isset($aspectNode)):
+            $colspanMax = max(array_column($YAxis, 'col')) + 2;
         elseif (isset($aspectNode)):
             $colspanMax = count($this->specification['rend']['aspectNode']);
         endif;
@@ -157,14 +152,14 @@ class RenderTable
 
         $head->setHeaderContents(1, 0, $this->searchLabel($this->specification['rend']['path'] . "#" . $tableNameId, 'http://www.xbrl.org/2008/role/verboseLabel'), array('colspan' => $colspanMax, 'rowspan' => ((!is_null($aspectNode)) ? $rowspanMax - 1 : $rowspanMax), 'class' => 'xbrl-th'));
 
-        $keys = array_keys($header);
+        $keys = array_keys($XAxis);
 
         //X axis
         foreach (array_keys($keys) as $row):
             if (isset($keys[$row - 1])):
-                $prev = $header[$keys[$row - 1]];
+                $prev = $XAxis[$keys[$row - 1]];
             endif;
-            $this_value = $header[$keys[$row]];
+            $this_value = $XAxis[$keys[$row]];
 
 
             if (isset($storPosition[$this_value['row']])) {
@@ -267,10 +262,10 @@ class RenderTable
 
         //Y axis
 
-        $len = count($contents);
+        $len = count($YAxis);
         $y = 0;
         if (!isset($aspectNode)):
-            foreach ($contents as $key => $row):
+            foreach ($YAxis as $key => $row):
 
                 if (true): //$row['abstract'] != 'true'
                     //echo "<pre>", print_r($row), "</pre>";
@@ -300,7 +295,7 @@ class RenderTable
 
                     if ($y != $len - 1):
                         $bold =
-                            ($row['col'] < $contents[$y + 1]['col'] && $contents[$y + 1]['abstract'] != 'true') ? TRUE : FALSE;
+                            ($row['col'] < $YAxis[$y + 1]['col'] && $YAxis[$y + 1]['abstract'] != 'true') ? TRUE : FALSE;
                     endif;
 
                     $body->setCellContents($y, 1 + $row['col'], (empty($labelName)) ? $row['to'] : $labelName);
@@ -398,7 +393,7 @@ class RenderTable
 
 
                     $dim =
-                        $this->mergeDimensions(DomToArray::search_multdim($header, 'to', $col['id']), $yN, $typ);
+                        $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $col['id']), $yN, $typ);
 
 
                     $def = $this->checkDef($dim);
@@ -429,7 +424,7 @@ class RenderTable
                     $name = 'c' . $col['rc-code'] . 'r' . $row['rc-code'];
 
                     $dim =
-                        $this->mergeDimensions(DomToArray::search_multdim($header, 'to', $col['id']), DomToArray::search_multdim($contents, 'to', $row['id']));
+                        $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']), null);
 
 
                     $def = $this->checkDef($dim);
@@ -440,7 +435,7 @@ class RenderTable
 
                     if ($disabled !== 'disabled'):
 
-                        $input = $this->getType($name, $def, $dim, $this->additional);
+                        $input = $this->getType($name, $def, $dim);
                         $body->setCellContents($y, $colspanMax + $x, $input);
                         $body->setCellAttributes($y, $colspanMax + $x, array(
                             'class' => 'xbrl-td',
@@ -472,14 +467,14 @@ class RenderTable
         return array('sheets' => $sheetsHtml, 'table' => $table->toHtml(), 'tableName' => $tableName, 'aspectNode' => $aspectNode, 'table', 'tableID' => $tableID);
     }
 
-    private function showSheets($sheets)
+    private function showSheets($ZAxis)
     {
         $html = NULL;
 
         $html .= "<select class='selectpicker' data-show-icon='true' id='sheet' name='sheet' >";
         $shee = 1;
 
-        foreach ($sheets as $sheet):
+        foreach ($ZAxis as $sheet):
 
             $label = $this->searchLabel($sheet['to'], 'http://www.xbrl.org/2008/role/label');
             $rccode =
@@ -497,7 +492,7 @@ class RenderTable
         return $html;
     }
 
-    private function explicitDimensionSheets($sheets, $dimension)
+    private function explicitDimensionSheets($ZAxis, $dimension)
     {
 
 
@@ -510,7 +505,7 @@ class RenderTable
         $html .= "<select class='selectpicker' data-show-icon='true' id='sheet' name='sheet' >";
         $shee = 1;
 
-        foreach ($sheets as $sheet):
+        foreach ($ZAxis as $sheet):
 
             // $label = $this->searchLabel($sheet['to'], 'http://www.xbrl.org/2008/role/label');
             // $rccode = $this->searchLabel($this->specification['rend']['path'] . "#" . $sheet['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
@@ -579,7 +574,7 @@ class RenderTable
         endforeach;
     }
 
-    private function getType($name, $def, $dim, $additional)
+    private function getType($name, $def, $dim, $additional = null)
     {
         $_dim = json_decode($dim, true);
 

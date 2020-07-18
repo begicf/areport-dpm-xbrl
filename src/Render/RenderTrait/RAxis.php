@@ -2,7 +2,6 @@
 
 namespace AReportDpmXBRL\Render\RenderTrait;
 
-use AReportDpmXBRL\Config\Config;
 use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Format;
@@ -66,7 +65,7 @@ trait RAxis
                     foreach ($children as $c):
 
                         if ($c['metric'] != 'false'):
-;
+                            ;
                             $tmpC = $tmpC + 1;
                         endif;
                     endforeach;
@@ -385,13 +384,12 @@ trait RAxis
     }
 
 
-
     /**
      * Check the link to the tax definition or whether the fields are used or not
      * @param $dim
      * @return bool
      */
-    public function checkDef($dim)
+    public function checkDef($dim, $z = null)
     {
 
         $this->specification['def'];
@@ -442,6 +440,7 @@ trait RAxis
             $tmpDom = $dom;
             if (isset($tmpDom['metric']) && isset($val[$tmpDom['metric']])):
                 unset($tmpDom['metric']);
+
                 foreach ($val as $keyVal => $row):
                     if (array_key_exists($keyVal, $tmpDom)):
 
@@ -483,7 +482,7 @@ trait RAxis
 
     }
 
-    public function mergeDimensions($x, $y, $typ = null)
+    public function mergeDimensions($x, $y, $typ = null, $z = null)
     {
 
         $allDim = $this->getAllDimensions();
