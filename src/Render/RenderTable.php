@@ -484,7 +484,7 @@ class RenderTable
 
             $exist =
                 isset($this->sheet[$rccode]) && $this->sheet[$rccode] == 'found' ? "data-icon='fas fa-file-alt'" : "";
-            $html .= "<option id='$rccode' data-id='$rccode'  $selected  $exist value=" . json_encode(array_merge($sheet['dimension'], ['sheet' => $rccode])) . ">$label</option>";
+            $html .= "<option id='$rccode' data-id='$rccode'  $selected  $exist value=" . json_encode(array_merge($sheet['dimension'],['metric'=>$sheet['metric']], ['sheet' => $rccode])) . ">$label</option>";
             //$html .= "<option  value=" . $rccode . ">$label</option>";
             $shee++;
         endforeach;

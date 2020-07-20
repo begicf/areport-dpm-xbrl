@@ -374,7 +374,7 @@ trait RAxis
                 break;
             if (isset($row['dimension']) && is_array($row['dimension'])):
                 foreach ($row['dimension'] as $key => $r):
-                    if (!in_array($key, $dim) and $row['abstract'] != 'ture' and $row['concept'] != "false"):
+                    if (!in_array($key, $dim) and $row['abstract'] == 'false' ):
                         $dim[$key] = strstr($r, ':', true);
                     endif;
                 endforeach;
@@ -442,9 +442,14 @@ trait RAxis
                 unset($tmpDom['metric']);
 
                 foreach ($val as $keyVal => $row):
+
                     if (array_key_exists($keyVal, $tmpDom)):
 
-                        unset($tmpDom[$keyVal]);
+
+
+                            unset($tmpDom[$keyVal]);
+
+
 
                     endif;
                 endforeach;
@@ -486,6 +491,7 @@ trait RAxis
     {
 
         $allDim = $this->getAllDimensions();
+
         $metric = array();
 
         if (!empty($x)):
