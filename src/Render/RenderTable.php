@@ -51,7 +51,7 @@ class RenderTable
     }
 
 
-    public function renderHtml($import = NULL)
+    public function renderHtml($import = NULL, $ZSelect = null)
     {
 
         $this->roleType = array_keys($this->specification['def']);
@@ -416,6 +416,10 @@ class RenderTable
             endfor;
         else:
             $x = $y = 0;
+            $z = null;
+            if (isset($ZAxis)):
+                $z = $this->getCurrentZAxis($ZAxis, $ZSelect);
+            endif;
             foreach ($this->col as $col) {
                 $y = 0;
                 foreach ($this->row as $row) {
@@ -423,8 +427,9 @@ class RenderTable
 
                     $name = 'c' . $col['rc-code'] . 'r' . $row['rc-code'];
 
+
                     $dim =
-                        $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']), null);
+                        $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']), null, $z);
 
 
                     $def = $this->checkDef($dim);
@@ -467,6 +472,25 @@ class RenderTable
         return array('sheets' => $sheetsHtml, 'table' => $table->toHtml(), 'tableName' => $tableName, 'aspectNode' => $aspectNode, 'table', 'tableID' => $tableID);
     }
 
+    private function getCurrentZAxis($ZAxis, $ZSelect)
+    {
+
+        if (is_null($ZAxis)):
+            return null;
+        endif;
+
+        if (!is_null($ZSelect)):
+
+            return current(DomToArray::search_multdim($ZAxis, 'order', (json_decode($ZSelect))->order));
+
+        else:
+
+            return current($ZAxis);
+
+        endif;
+
+    }
+
     private function showSheets($ZAxis)
     {
         $html = NULL;
@@ -484,7 +508,13 @@ class RenderTable
 
             $exist =
                 isset($this->sheet[$rccode]) && $this->sheet[$rccode] == 'found' ? "data-icon='fas fa-file-alt'" : "";
-            $html .= "<option id='$rccode' data-id='$rccode'  $selected  $exist value=" . json_encode(array_merge($sheet['dimension'],['metric'=>$sheet['metric']], ['sheet' => $rccode])) . ">$label</option>";
+            $html .= "<option id='$rccode' data-id='$rccode'  $selected  $exist value=" . json_encode(
+                    array_merge(
+                        $sheet['dimension'],
+                        ['order' => $sheet['order']],
+                        ['metric' => $sheet['metric']],
+                        ['sheet' => $rccode])
+                ) . ">$label</option>";
             //$html .= "<option  value=" . $rccode . ">$label</option>";
             $shee++;
         endforeach;

@@ -47,9 +47,9 @@ class Render
      * @param $import
      * @return array
      */
-    public function renderHtmlForm($import)
+    public function renderHtmlForm($import, $ZSelect = null)
     {
-        return (new RenderTable($this->specification, $this->lang, $this->additionalData))->renderHtml($import);
+        return (new RenderTable($this->specification, $this->lang, $this->additionalData))->renderHtml($import, $ZSelect);
     }
 
     /**

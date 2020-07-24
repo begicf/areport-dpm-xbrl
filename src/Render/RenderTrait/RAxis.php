@@ -21,6 +21,7 @@ use AReportDpmXBRL\Library\Format;
  */
 trait RAxis
 {
+    private $tmp = [];
 
     public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array())
     {
@@ -374,7 +375,7 @@ trait RAxis
                 break;
             if (isset($row['dimension']) && is_array($row['dimension'])):
                 foreach ($row['dimension'] as $key => $r):
-                    if (!in_array($key, $dim) and $row['abstract'] == 'false' ):
+                    if (!in_array($key, $dim) and $row['abstract'] == 'false'):
                         $dim[$key] = strstr($r, ':', true);
                     endif;
                 endforeach;
@@ -389,7 +390,7 @@ trait RAxis
      * @param $dim
      * @return bool
      */
-    public function checkDef($dim, $z = null)
+    public function checkDef($dim)
     {
 
         $this->specification['def'];
@@ -435,34 +436,52 @@ trait RAxis
 
         endforeach;
 
+        if (empty($this->tmp)):
+            foreach ($this->specification['def'] as $key => &$val):
+//            $tmpDom = $dom;
+                //if (isset($tmpDom['metric']) && isset($val[$tmpDom['metric']])):
+//                unset($tmpDom['metric']);
 
-        foreach ($this->specification['def'] as $key => $val):
-            $tmpDom = $dom;
-            if (isset($tmpDom['metric']) && isset($val[$tmpDom['metric']])):
-                unset($tmpDom['metric']);
-
-                foreach ($val as $keyVal => $row):
-
-                    if (array_key_exists($keyVal, $tmpDom)):
-
-
-
-                            unset($tmpDom[$keyVal]);
-
-
-
-                    endif;
-                endforeach;
-
-
-                if (empty($tmpDom)):
-                    return $val[$metric];
+                if (count($val) > 2):
+                    foreach ($val as $keyVal => $row):
+                        $this->tmp[$key][$keyVal] = $row;
+                    endforeach;
                 endif;
 
+
+
+//                    if (array_key_exists($keyVal, $tmpDom)):
+//
+//
+//
+//                            unset($tmpDom[$keyVal]);
+//
+//
+//
+//                    endif;
+                //  endforeach;
+
+//                if (empty($tmpDom)):
+//                    return $val[$metric];
+//                endif;
+
+                //endif;
+
+
+            endforeach;
+        endif;
+
+        foreach ($this->tmp as $index => $item) {
+            if (isset($dom['metric'])&&isset($item[$dom['metric']])):
+
+                $dif = array_diff_key($item, $dom);
+
+                if (count($dif) == (count($item) - count($dom) + 1)):
+                    return $item[$dom['metric']];
+                endif;
             endif;
+        }
 
-
-        endforeach;
 
         return false;
     }
@@ -484,7 +503,6 @@ trait RAxis
 
         endforeach;
 
-
     }
 
     public function mergeDimensions($x, $y, $typ = null, $z = null)
@@ -505,15 +523,19 @@ trait RAxis
 
         if (isset($x['metric']) && $x['metric'] != 'false'):
             $metric = ['metric' => $x['metric']];
-        elseif (isset($y['metric'])):
+        elseif (isset($y['metric']) && $y['metric'] != 'false'):
             $metric = ['metric' => $y['metric']];
+        elseif (isset($z['metric']) && $z['metric'] != 'false'):
+            $metric = ['metric' => $z['metric']];
         endif;
 
 
         if (isset($y['dimensionAspect']) && isset($x['dimension'])):
             $merge = array_merge($metric, (array)$x['dimension']);
-        elseif (isset($x['dimension']) && isset($y['dimension'])):
+        elseif (isset($x['dimension']) && isset($y['dimension']) && is_null($z)):
             $merge = array_merge($metric, (array)$x['dimension'], (array)$y['dimension']);
+        elseif (isset($x['dimension']) && isset($y['dimension']) && $z['dimension']):
+            $merge = array_merge($metric, (array)$x['dimension'], (array)$y['dimension'], (array)$z['dimension']);
         elseif (isset($y['dimensionAspect'])):
             if (is_array($typ)):
                 return json_encode(array_merge(array($y['dimensionAspect'] => "*"), $typ));
