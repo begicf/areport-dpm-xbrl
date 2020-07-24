@@ -438,35 +438,12 @@ trait RAxis
 
         if (empty($this->tmp)):
             foreach ($this->specification['def'] as $key => &$val):
-//            $tmpDom = $dom;
-                //if (isset($tmpDom['metric']) && isset($val[$tmpDom['metric']])):
-//                unset($tmpDom['metric']);
 
                 if (count($val) > 2):
                     foreach ($val as $keyVal => $row):
                         $this->tmp[$key][$keyVal] = $row;
                     endforeach;
                 endif;
-
-
-
-//                    if (array_key_exists($keyVal, $tmpDom)):
-//
-//
-//
-//                            unset($tmpDom[$keyVal]);
-//
-//
-//
-//                    endif;
-                //  endforeach;
-
-//                if (empty($tmpDom)):
-//                    return $val[$metric];
-//                endif;
-
-                //endif;
-
 
             endforeach;
         endif;
