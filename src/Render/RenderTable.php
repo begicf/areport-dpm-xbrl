@@ -124,7 +124,7 @@ class RenderTable
                         $ZAxis =
                             $this->buildZAxis($this->specification['rend']['definitionNodeSubtreeArc'], key($row));
 
-                        $sheetsHtml = $this->showSheets($ZAxis);
+                        $sheetsHtml = $this->showSheets($ZAxis, $ZSelect);
 
                     endif;
                     break;
@@ -491,8 +491,9 @@ class RenderTable
 
     }
 
-    private function showSheets($ZAxis)
+    private function showSheets($ZAxis, $ZSelect)
     {
+        $ZSelect=json_decode($ZSelect,true);
         $html = NULL;
 
         $html .= "<select class='selectpicker' data-show-icon='true' id='sheet' name='sheet' >";
@@ -503,11 +504,17 @@ class RenderTable
             $label = $this->searchLabel($sheet['to'], 'http://www.xbrl.org/2008/role/label');
             $rccode =
                 $this->searchLabel($this->specification['rend']['path'] . "#" . $sheet['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
-            $selected =
-                isset($this->sheet[$rccode]) && $this->sheet[$rccode] == 'active' ? 'selected data-icon=\'fas fa-file-alt\'' : '';
+            if (is_null($ZSelect)):
+                $selected =
+                    isset($this->sheet[$rccode]) && $this->sheet[$rccode] == 'active' ? 'selected data-icon=\'fas fa-file-alt\'' : '';
+            else:
+                $selected =
+                    (isset($ZSelect['order']) && $ZSelect['order'] == $sheet['order']) ? 'selected data-icon=\'fas fa-file-alt\'' : '';
+            endif;
 
             $exist =
-                isset($this->sheet[$rccode]) && $this->sheet[$rccode] == 'found' ? "data-icon='fas fa-file-alt'" : "";
+                isset($this->sheet[$rccode]) ? "data-icon='fas fa-file-alt'" : "";
+
             $html .= "<option id='$rccode' data-id='$rccode'  $selected  $exist value=" . json_encode(
                     array_merge(
                         $sheet['dimension'],
