@@ -472,24 +472,7 @@ class RenderTable
         return array('sheets' => $sheetsHtml, 'table' => $table->toHtml(), 'tableName' => $tableName, 'aspectNode' => $aspectNode, 'table', 'tableID' => $tableID);
     }
 
-    private function getCurrentZAxis($ZAxis, $ZSelect)
-    {
 
-        if (is_null($ZAxis)):
-            return null;
-        endif;
-
-        if (!is_null($ZSelect)):
-
-            return current(DomToArray::search_multdim($ZAxis, 'order', (json_decode($ZSelect))->order));
-
-        else:
-
-            return current($ZAxis);
-
-        endif;
-
-    }
 
     private function showSheets($ZAxis, $ZSelect)
     {

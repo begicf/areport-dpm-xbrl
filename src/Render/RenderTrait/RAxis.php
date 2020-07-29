@@ -364,6 +364,9 @@ trait RAxis
         endswitch;
     }
 
+    /**
+     * @return array
+     */
     private function getAllDimensions()
     {
         $ruleNode = $this->specification['rend']['ruleNode'];
@@ -449,7 +452,7 @@ trait RAxis
         endif;
 
         foreach ($this->tmp as $index => $item) {
-            if (isset($dom['metric'])&&isset($item[$dom['metric']])):
+            if (isset($dom['metric']) && isset($item[$dom['metric']])):
 
                 $dif = array_diff_key($item, $dom);
 
@@ -463,6 +466,11 @@ trait RAxis
         return false;
     }
 
+    /**
+     * @param $domain
+     * @param $value
+     * @return string
+     */
     public function getHierKey($domain, $value)
     {
 
@@ -482,6 +490,13 @@ trait RAxis
 
     }
 
+    /**
+     * @param $x
+     * @param $y
+     * @param null $typ
+     * @param null $z
+     * @return false|string
+     */
     public function mergeDimensions($x, $y, $typ = null, $z = null)
     {
 
@@ -535,6 +550,10 @@ trait RAxis
         return json_encode($merge);
     }
 
+    /**
+     * @param $row
+     * @return int|mixed
+     */
     public function getMaxRow($row)
     {
         $var = array(1);
@@ -549,6 +568,31 @@ trait RAxis
         else:
             return 1;
         endif;
+    }
+
+    /**
+     * @param $ZAxis
+     * @param $ZSelect
+     * @return mixed|null
+     */
+
+    private function getCurrentZAxis($ZAxis, $ZSelect)
+    {
+
+        if (is_null($ZAxis)):
+            return null;
+        endif;
+
+        if (!is_null($ZSelect)):
+
+            return current(DomToArray::search_multdim($ZAxis, 'order', (json_decode($ZSelect))->order));
+
+        else:
+
+            return current($ZAxis);
+
+        endif;
+
     }
 
 }

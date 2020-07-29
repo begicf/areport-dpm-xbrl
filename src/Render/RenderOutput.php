@@ -188,7 +188,7 @@ class RenderOutput
         return $this;
     }
 
-    public function renderOutputAll($import = NULL)
+    public function renderOutputAll($import = NULL, $ZSelect = null)
     {
 
 
@@ -241,7 +241,8 @@ class RenderOutput
                 $this->drawOpenContent($s, $XAxis);
             else:
 
-                $this->drawFixContent($s, $XAxis, $YAxis);
+                $this->drawFixContent($s, $XAxis, $YAxis, $ZAxis, $ZSelect);
+
             endif;
 
             $s++;
@@ -585,10 +586,14 @@ class RenderOutput
         endif;
     }
 
-    private function drawFixContent($s, $XAxis, $YAxis)
+    private function drawFixContent($s, $XAxis, $YAxis, $ZAxis, $ZSelect)
     {
-
+        $z = null;
         $x = $y = 1;
+        if (isset($ZAxis)):
+            $z = $this->getCurrentZAxis($ZAxis, $ZSelect);
+        endif;
+
         foreach ($this->col as $this->_col):
             $y = 1;
             foreach ($this->row as $row):
@@ -596,8 +601,8 @@ class RenderOutput
                 $y++;
                 $name = 'c' . $this->_col['rc-code'] . 'r' . $row['rc-code'];
                 $dim =
-                    $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']));
-                $def = $this->checkDef($dim, $name);
+                    $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), DomToArray::search_multdim($YAxis, 'to', $row['id']), null, $z);
+                $def = $this->checkDef($dim);
                 $disabled = ($def && $row['abstract'] != 'true' && $this->_col['abstract'] != 'true') ? '' : 'disabled';
 
                 if ($disabled == 'disabled'):
