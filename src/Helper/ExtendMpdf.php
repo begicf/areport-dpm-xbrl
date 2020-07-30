@@ -130,7 +130,7 @@ class ExtendMpdf extends Pdf
 
 
         $pdf->WriteHTML(
-            $this->HeaderFBA().
+            $this->Header().
             $this->generateSheetData()
             //  $this->generateHTMLFooter().
            // $this->singers()
@@ -143,7 +143,7 @@ class ExtendMpdf extends Pdf
         parent::restoreStateAfterSave($fileHandle);
     }
 
-    private function HeaderFBA()
+    private function Header()
     {
 
         $heaader = <<<EOT

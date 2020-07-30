@@ -672,9 +672,6 @@ class RenderTable
 
                 $input = "<input  name='" . $name . "[dim]' value='$dim' type='hidden' />";
 
-//fix $dis = (key(json_decode($dim)) == 'fba_dim:VDI') ? 'disabled' : ''; -- treba brisat nije xbrl specifikacija
-                $dis = (key(json_decode($dim)) == 'fba_dim:VDI') ? 'disabled' : '';
-
                 $input .= "<select  $dis class='xbrl-select' id='$name' name='" . $name . "[value]' oninvalid=\"this.setCustomValidity('Molim, odaberite stavku sa liste')\" oninput=\"setCustomValidity('')\" >";
 
                 $input .= "<option></option>";
