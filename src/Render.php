@@ -14,6 +14,7 @@ use AReportDpmXBRL\Render\RenderOutput;
 use AReportDpmXBRL\Render\RenderPDF;
 use AReportDpmXBRL\Render\RenderTable;
 use AReportDpmXBRL\Render\RenderTrait\RTrait;
+use Exception;
 
 
 /**
@@ -44,20 +45,40 @@ class Render
     }
 
     /**
-     * @param $import
-     * @return array
+     * @param $import array [
+     * $params=[
+     *  'sheets'=> (string) Required ,
+     *  'file'=> =(array) data,
+     *  'ext'=>('DB', 'XBRL') Source of data Required,
+     *  ]
+     * ]
+     *
+     * @return array [
+     *  'table' => (string) Table HTMl Form,
+     *  'sheets' => (string)  Sheets HTML Form
+     *  'tableName' => (string)  Table Name
+     *  'aspectNode' => (bool)  Aspect Axis
+     *  'tableID'=> (string)  Table ID
+     *  'groups' => (string)  Table group
+     * ]
      */
-    public function renderHtmlForm($import, $ZSelect = null)
+    public function renderHtmlForm($import, $ZSelect = null): array
     {
         return (new RenderTable($this->specification, $this->lang, $this->additionalData))->renderHtml($import, $ZSelect);
     }
 
     /**
-     * @param $type
+     * @param string $type pdf | xlsx
      * @return RenderOutput
+     * @throws Exception
      */
-    public function export($type)
+    public function export(string $type = 'xlsx')
     {
+
+        if ($type != 'html' || $type != 'xlsx'):
+            throw new Exception("Export extensions must be xlsx or html");
+        endif;
+
 
         if (!isset($this->additionalData['file_path'])):
             $this->additionalData['file_path'] = Config::publicDir() . $this->filename;

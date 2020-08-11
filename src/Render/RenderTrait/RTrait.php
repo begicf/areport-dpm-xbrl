@@ -15,6 +15,14 @@ trait RTrait
     public $lang;
     public $additionalData = [];
 
+    /**
+     * RTrait constructor.
+     * @param null $specification XBRL specification
+     * @param null $lang Set lang preference
+     * @param array $additional
+     * @throws Exception
+     *
+     */
     public function __construct($specification = null, $lang = NULL, $additional = [])
     {
         if (is_null($specification)) {

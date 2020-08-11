@@ -80,9 +80,6 @@ class RenderOutput
         StringHelper::setDecimalSeparator(',');
         StringHelper::setThousandsSeparator('.');
 
-
-        $this->specification = $xbrl;
-
         $this->roleType = array_keys($this->specification['def']);
 
         $this->_type = $type;
@@ -97,7 +94,7 @@ class RenderOutput
      *
      * @return type
      */
-    public function getXAxis()
+    private function getXAxis()
     {
         return $this->buildXAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['x'])['to']);
     }
@@ -106,7 +103,7 @@ class RenderOutput
      *
      * @return type
      */
-    public function getYAxis()
+    private function getYAxis()
     {
 
         if (isset($this->_aspectNode['y'])):
@@ -122,7 +119,7 @@ class RenderOutput
     /**
      *
      */
-    public function getZAxis()
+    private function getZAxis()
     {
         if (isset($this->breakdownTreeArc['z'])):
             return $this->buildZAxis($this->specification['rend']['definitionNodeSubtreeArc'], current($this->breakdownTreeArc['z'])['to']);
@@ -130,9 +127,9 @@ class RenderOutput
     }
 
     /**
-     *
+     * Checks for an open axis
      */
-    public function setAspectNode()
+    private function setAspectNode()
     {
 
         if (isset($this->specification['rend']['aspectNode'])):
@@ -185,7 +182,7 @@ class RenderOutput
             $this->drawFixContent($s, $XAxis, $YAxis);
         endif;
 
-        return $this;
+        $this->exportFormat();
     }
 
     public function renderOutputAll($import = NULL, $ZSelect = null)
@@ -247,15 +244,14 @@ class RenderOutput
 
             $s++;
         endforeach;
-        return $this;
+        $this->exportFormat();
     }
 
     /**
      * @param type $signers
      */
-    public function exportFormat()
+    private function exportFormat()
     {
-
         switch ($this->_type):
             case 'xlsx':
                 $this->outputExcel($this->spreadsheet);
@@ -273,7 +269,7 @@ class RenderOutput
         endswitch;
     }
 
-    public function setSpanMax($xAxis = NULL, $yAxis = NULL)
+    private function setSpanMax($xAxis = NULL, $yAxis = NULL)
     {
 
         if ($xAxis == NULL):
@@ -298,7 +294,7 @@ class RenderOutput
         endif;
     }
 
-    public function drawXAxis($header, $s = 0)
+    private function drawXAxis($header, $s = 0)
     {
         $this->_col = 1;
 
@@ -423,7 +419,7 @@ class RenderOutput
         endforeach;
     }
 
-    public function getZAxisRaw($ZAxis)
+    private function getZAxisRaw($ZAxis)
     {
 
 
@@ -462,7 +458,7 @@ class RenderOutput
         endif;
     }
 
-    public function drawZAxis($ZAxis, $s)
+    private function drawZAxis($ZAxis, $s)
     {
 
 
@@ -509,7 +505,7 @@ class RenderOutput
         endif;
     }
 
-    public function drawYAxis($contents, $s)
+    private function drawYAxis($contents, $s)
     {
 
         //Y
