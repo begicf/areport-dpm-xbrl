@@ -1,5 +1,11 @@
-AReportDpmXBRL
+AEeportDPMXBRL
 ==========
-This is a ^ PHP 7.2 XBRL parser written in PHP.
+AreportDPMXBRL is library for parsing XBRL taxonomy, which is created by DPM Architect.
+This standard is recommended and implemented by EU regulators such as EBA and EIOPA.
 
-[Demo](https://demo.areport.net)
+Web application Areport use this library to parse XBRL taxonomy.
+
+[More information](https://github.com/begicf/areport)
+
+#### Demo
+[Areport](https://demo.areport.net)
