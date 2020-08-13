@@ -250,7 +250,7 @@ class RenderTable
                     //'metric' => ($this_value['metric'] == 'false') ? '' : $this_value['metric'],
                     //'dimension' => json_encode($this_value['dimension']),
                 ));
-                //postoji bug kod setovanja colspan-a i rowspan-a
+
 
                 $head->setHeaderContents($rowspanMax, $col + $colspanMax, $rcCode, array('class' => 'rc-code', 'data-col' => $col));
 
@@ -505,7 +505,7 @@ class RenderTable
                         ['metric' => $sheet['metric']],
                         ['sheet' => $rccode])
                 ) . ">$label</option>";
-            //$html .= "<option  value=" . $rccode . ">$label</option>";
+
             $shee++;
         endforeach;
         $html .= "</select>";
@@ -527,9 +527,7 @@ class RenderTable
 
         foreach ($ZAxis as $sheet):
 
-            // $label = $this->searchLabel($sheet['to'], 'http://www.xbrl.org/2008/role/label');
-            // $rccode = $this->searchLabel($this->specification['rend']['path'] . "#" . $sheet['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
-            //  $selected = isset($this->sheet[$rccode]) && $this->sheet[$rccode] == 'active' ? 'selected' : '';
+
             $id = substr($sheet['href'], strpos($sheet['href'], "#") + 1);
             $keyID = substr($id, strpos($id, "_") + 1);
             $key[$dim] = $dom . ':' . $keyID;
@@ -610,13 +608,13 @@ class RenderTable
             switch ($def['type_metric']):
 
                 case 'xbrli:monetaryItemType':
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Upišite cjelobrojnu vrijednost'  name='" . $name . "[value]' type='number'  value='$value' class='xbrl-input' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter an integer value'  name='" . $name . "[value]' type='number'  value='$value' class='xbrl-input' />";
                     break;
                 case 'xbrli:QNameItemType':
                 case 'enum:enumerationItemType':
                     if (isset($def['presentation'])):
 
-                        $input .= "<select class='xbrl-select' id='$name' name='" . $name . "[value]'  oninvalid=\"this.setCustomValidity('Molim, odaberite stavku sa liste')\" oninput=\"setCustomValidity('')\">";
+                        $input .= "<select class='xbrl-select' id='$name' name='" . $name . "[value]'  oninvalid=\"this.setCustomValidity('Please select an item from the list')\" oninput=\"setCustomValidity('')\">";
                         $input .= "<option value=''></option>";
                         foreach ($def['presentation'] as $row):
 
@@ -626,7 +624,7 @@ class RenderTable
                     endif;
                     break;
                 case 'num:percentItemType':
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . "  step='.01' id='$name' pattern='[0-9]+(,[0-9]{2})%' title='Procenat mora biti u sljedećem formatu (npr. 10,00%) sa dva decimalna mjesta'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input percent' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . "  step='.01' id='$name' pattern='[0-9]+(,[0-9]{2})%' title='The percentage must be in the following format (eg 10.00%) with two decimal places'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input percent' />";
                     break;
                 case 'xbrli:booleanItemType':
 
