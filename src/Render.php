@@ -75,7 +75,7 @@ class Render
     public function export(string $type = 'xlsx')
     {
 
-        if ($type != 'html' || $type != 'xlsx'):
+        if ($type != 'html'):
             throw new Exception("Export extensions must be xlsx or html");
         endif;
 
