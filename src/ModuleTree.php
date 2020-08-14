@@ -305,7 +305,7 @@ class ModuleTree
     private function fetchModule($path): ?array
     {
 
-        $modules = Directory::getPath($path, ['mod' => 'mod/']);
+        $modules = Directory::getPath($path, ['mod' => 'mod' . DIRECTORY_SEPARATOR]);
         $module = [];
 
         foreach ($modules['mod'] as $key => $mod):
