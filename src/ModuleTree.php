@@ -156,7 +156,7 @@ class ModuleTree
                             'id' => $row['label'],
                             'ext' => 'tab',
                             "text" => (empty($this->lang)) ? $row['label'] : $name['@content'],
-                            "mod" => Config::publicDir() . DIRECTORY_SEPARATOR . $mod['mod_path'],
+                            "mod" => ((is_file($mod['mod_path']))?$mod['mod_path']:Config::publicDir() . DIRECTORY_SEPARATOR . $mod['mod_path']),
                             'type' => 'mod'
                         ];
 
