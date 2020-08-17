@@ -524,7 +524,7 @@ trait RAxis
 
         if (isset($y['dimensionAspect']) && isset($x['dimension'])):
             $merge = array_merge($metric, (array)$x['dimension']);
-        elseif (isset($x['dimension']) && isset($y['dimension']) && (is_null($z) || empty($z))):
+        elseif (isset($x['dimension']) && isset($y['dimension']) && (is_null($z) || empty($z['dimension']))):
             $merge = array_merge($metric, (array)$x['dimension'], (array)$y['dimension']);
         elseif (isset($x['dimension']) && isset($y['dimension']) && isset($z['dimension'])):
             $merge = array_merge($metric, (array)$x['dimension'], (array)$y['dimension'], (array)$z['dimension']);
