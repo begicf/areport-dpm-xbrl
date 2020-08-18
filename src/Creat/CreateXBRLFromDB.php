@@ -28,29 +28,30 @@ class CreateXBRLFromDB extends XMLWriter
 
     private $context;
     private $date;
-    private $organisation = '12345678912345678912';
+    private $organisation;
     private $schemaRef;
     private $fIndicators;
-    private $tempContext = array();
+    private $tempContext = [];
     private $id = 1;
-    private $Metric = array();
-    private $unit = array();
-    private $namespace = array();
+    private $Metric = [];
+    private $unit = [];
+    private $namespace = [];
     private $typedMember;
-    private $aspectNode = array();
+    private $aspectNode = [];
     private $moduleDir;
 
     private $defaultMI;
 
     /**
-     *
-     * @param type $data
-     * @param type $schemaRef
-     * @param type $context
-     * @param type $fIndicators
-     * @param type $imports
+     * CreateXBRLFromDB constructor.
+     * @param $data
+     * @param $organisation
+     * @param $schemaRef
+     * @param $context
+     * @param null $fIndicators
+     * @param null $moduleDir
      */
-    public function __construct($data, $schemaRef, $context, $fIndicators = null, $moduleDir = null)
+    public function __construct($data, $organisation, $schemaRef, $context, $fIndicators = null, $moduleDir = null)
     {
 
         $this->date = $data;
@@ -58,6 +59,7 @@ class CreateXBRLFromDB extends XMLWriter
         $this->context = $context;
         $this->fIndicators = $fIndicators;
         $this->moduleDir = $moduleDir;
+        $this->organisation = $organisation;
 
         $this->defaultMI = Config::$monetaryItem;
     }
