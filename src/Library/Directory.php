@@ -174,7 +174,7 @@ class Directory
      */
     public static function getOwnerUrl($file_path): ?string
     {
-        return self::getStringBetween($file_path, self::getRootName($file_path) . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR);
+        return self::getStringBetween($file_path, self::getRootName($file_path) .  '/','/');
 
     }
 
