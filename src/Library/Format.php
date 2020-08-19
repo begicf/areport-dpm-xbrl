@@ -64,7 +64,15 @@ class Format
      */
     public static function getAfterSpecChar($string, $needle, $num = 1)
     {
-        return substr($string, strpos($string, $needle) + $num);
+        if (strpos($string, $needle) !== false):
+
+            return substr($string, strpos($string, $needle) + $num);
+
+        else:
+
+            return $string;
+
+        endif;
     }
 
     /**

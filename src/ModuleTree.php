@@ -153,10 +153,10 @@ class ModuleTree
                             'parent' => $id,
                             'children' => true,
                             'data' => $path,
-                            'id' => $row['label'],
+                            'id' => $id . '#' . $row['label'],
                             'ext' => 'tab',
                             "text" => (empty($this->lang)) ? $row['label'] : $name['@content'],
-                            "mod" => ((is_file($mod['mod_path']))?$mod['mod_path']:Config::publicDir() . DIRECTORY_SEPARATOR . $mod['mod_path']),
+                            "mod" => ((is_file($mod['mod_path'])) ? $mod['mod_path'] : Config::publicDir() . DIRECTORY_SEPARATOR . $mod['mod_path']),
                             'type' => 'mod'
                         ];
 
@@ -173,6 +173,7 @@ class ModuleTree
     {
 
         $data = [];
+        $ids = Format::getAfterSpecChar($id, '#');
 
         $module = $this->fetchModule($path);
 
@@ -184,7 +185,7 @@ class ModuleTree
                 foreach ($mod['pre'] as $key => $row):
 
 
-                    if (isset($row['from']) && $row['from'] == $id && isset($row['label'])):
+                    if (isset($row['from']) && $row['from'] == $ids && isset($row['label'])):
 
                         $_path = pathinfo(strtok($row['href'], "#"));
 
@@ -276,7 +277,7 @@ class ModuleTree
                         endif;
 
                         $data[$row['order'] - 1] = [
-                            'parent' => $row['from'],
+                            'parent' => ((strpos($id, '#') !== false) ? $id : $row['from']),
                             "children" => $children,
                             'data' => $path,
                             'lang' => preg_replace('/lab-/', '', $this->lang, 1),
