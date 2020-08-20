@@ -1,4 +1,4 @@
-AEeportDPMXBRL
+AreportDPMXBRL
 ==========
 AreportDPMXBRL is library for parsing XBRL taxonomy, which is created by DPM Architect.
 This standard is recommended and implemented by EU regulators such as EBA and EIOPA.
