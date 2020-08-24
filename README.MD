@@ -24,7 +24,7 @@ use AReportDpmXBRL\Render;
 //parse taxonomy
 $tax = Data::getTax($table_path); //set table absolute path
 
-// render HTML form
+//render HTML form
 $render = new Render($tax);
 
     /*
