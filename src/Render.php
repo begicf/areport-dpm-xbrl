@@ -12,7 +12,7 @@ use AReportDpmXBRL\Config\Config;
 use AReportDpmXBRL\Render\RenderExport;
 use AReportDpmXBRL\Render\RenderOutput;
 use AReportDpmXBRL\Render\RenderPDF;
-use AReportDpmXBRL\Render\RenderTable;
+use AReportDpmXBRL\Render\RenderHtmlTable;
 use AReportDpmXBRL\Render\RenderTrait\RTrait;
 use Exception;
 
@@ -29,20 +29,6 @@ class Render
     use RTrait;
 
     private $filename;
-
-    /**
-     * @return array|mixed
-     */
-    public function getTableID()
-    {
-        $tableNameId = key($this->specification['rend']['table']);
-
-        $tableLabelName = $this->specification['rend']['table'][$tableNameId]['label'];
-
-        $tableID =
-            $this->searchLabel($this->specification['rend']['path'] . "#" . $tableLabelName, 'http://www.eba.europa.eu/xbrl/role/dpm-db-id');
-        return $tableID;
-    }
 
     /**
      * @param $import array [
@@ -64,7 +50,7 @@ class Render
      */
     public function renderHtmlForm($import, $ZSelect = null): array
     {
-        return (new RenderTable($this->specification, $this->lang, $this->additionalData))->renderHtml($import, $ZSelect);
+        return (new RenderHtmlTable($this->specification, $this->lang, $this->additionalData))->renderHtml($import, $ZSelect);
     }
 
     /**

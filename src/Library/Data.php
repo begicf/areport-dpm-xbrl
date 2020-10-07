@@ -37,6 +37,7 @@ class Data
 
         $_tax['imports'] = $tax->imports;
         $_tax['namespace'] = $tax->namespace;
+        $_tax['targetNamespace'] = $tax->getTargetNamespace();
 
         if (empty($tax->elements) == FALSE):
             $_tax['elements'] = $tax->elements;

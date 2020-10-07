@@ -5,7 +5,7 @@ namespace AReportDpmXBRL;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Render\RenderOutput;
 use AReportDpmXBRL\Render\RenderPDF;
-use AReportDpmXBRL\Render\RenderTable;
+use AReportDpmXBRL\Render\RenderHtmlTable;
 
 
 /*

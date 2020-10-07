@@ -5,11 +5,14 @@ namespace AReportDpmXBRL\Render\RenderTrait;
 
 
 use AReportDpmXBRL\Config\Config;
+use AReportDpmXBRL\Library\Format;
 use Exception;
 
 
 trait RTrait
 {
+
+    use RAxis;
 
     public $specification;
     public $lang;
@@ -72,7 +75,7 @@ trait RTrait
     }
 
     /**
-     * @return string|null
+     * @return string|null name
      */
     public function tableName(): ?string
     {
@@ -80,12 +83,50 @@ trait RTrait
     }
 
     /**
-     * @return string|null
+     * @return string|null Definition
      */
     public function tableVerboseName(): ?string
     {
 
         return $this->searchLabel($this->tableLabelName(), 'http://www.xbrl.org/2008/role/verboseLabel');
+
+    }
+
+    /**
+     * @return string|null External table DB code
+     */
+    public function getExtCode(): ?string
+    {
+
+        return $this->searchLabel($this->specification['rend']['path'] . "#" . $this->tableLabelName(), 'http://www.eba.europa.eu/xbrl/role/dpm-db-id');
+
+    }
+
+    /**
+     * @return string|null Target Namespace
+     */
+    public function getTargetNamespace(): ?string
+    {
+
+        return $this->specification['targetNamespace'];
+    }
+
+    /**
+     * @return string|null Filing indicator
+     */
+    public function getFilingIndicator(): ?string
+    {
+
+        return $this->searchLabel($this->specification['rend']['path'] . "#" . $this->tableLabelName(), 'http://www.eurofiling.info/xbrl/role/filing-indicator-code');
+
+    }
+
+    /**
+     * @return string|null code
+     */
+    public function getCode(): ?string
+    {
+        return basename($this->getTargetNamespace());
 
     }
 

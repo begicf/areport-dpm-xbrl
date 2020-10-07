@@ -23,9 +23,9 @@ use AReportDpmXBRL\Render\RenderTrait\RTrait;
  * @author Fuad Begic <fuad.begic@gmail.com>
  * Date: 12/06/2020
  */
-class RenderTable
+class RenderHtmlTable
 {
-    use RTrait, RAxis;
+    use RTrait;
 
     //put your code here
 
@@ -71,6 +71,8 @@ class RenderTable
         $explicitDimension = NULL;
 
         $tableNameId = key($this->specification['rend']['table']);
+
+
 
         $tableLabelName = $this->specification['rend']['table'][$tableNameId]['label'];
 
@@ -151,7 +153,6 @@ class RenderTable
         $head->setHeaderContents(0, 0, $this->searchLabel($tableNameId, 'http://www.xbrl.org/2008/role/label'), array('colspan' => $colspanMax, 'class' => 'xbrl-title', 'rowspan' => ((!is_null($aspectNode)) ? $rowspanMax : $rowspanMax + 1)));
 
         $head->setHeaderContents(1, 0, $this->searchLabel($this->specification['rend']['path'] . "#" . $tableNameId, 'http://www.xbrl.org/2008/role/verboseLabel'), array('colspan' => $colspanMax, 'rowspan' => ((!is_null($aspectNode)) ? $rowspanMax - 1 : $rowspanMax), 'class' => 'xbrl-th'));
-
         $keys = array_keys($XAxis);
 
         //X axis
