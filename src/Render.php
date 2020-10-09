@@ -61,8 +61,8 @@ class Render
     public function export(string $type = 'xlsx')
     {
 
-        if (!in_array($type,['html','xlsx'])):
-            throw new Exception("Export extensions must be xlsx or html");
+        if (!in_array($type,['html','xlsx','pdf'])):
+            throw new Exception("Export extensions must be xlsx, pdf or html");
         endif;
 
 

@@ -14,7 +14,6 @@ use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Library\Directory;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Format;
-use AReportDpmXBRL\Render\RenderTrait\RAxis;
 use AReportDpmXBRL\Render\RenderTrait\RExcel;
 use AReportDpmXBRL\Render\RenderTrait\RTrait;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -38,8 +37,6 @@ class RenderOutput
     use RTrait {
         RTrait::__construct as private __RtraitConstruct;
     }
-
-    use RAxis;
 
     use RExcel;
 
@@ -798,9 +795,9 @@ class RenderOutput
                 case 'xbrli:booleanItemType':
 
                     if ($value['string'] === 'true'):
-                        $value = 'DA';
+                        $value = 'Yes';
                     elseif ($value['string'] === 'false'):
-                        $value = 'NE';
+                        $value = 'No';
                     else:
                         $value = '';
                     endif;
@@ -821,6 +818,7 @@ class RenderOutput
 
     private function outputHtml($spreadsheet)
     {
+        $spreadsheet->getActiveSheet()->setShowGridLines(false);
         $writer = IOFactory::createWriter($spreadsheet, 'Html');
         $writer->save('php://output');
     }
@@ -855,7 +853,6 @@ class RenderOutput
 
         $pdf = new ExtendMpdf($spreadsheet);
 
-        $pdf->setInfo($info);
 
         $pdf->save('php://output');
     }
