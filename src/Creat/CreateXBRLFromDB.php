@@ -505,7 +505,7 @@ class CreateXBRLFromDB extends XMLWriter
 
         endforeach;
 
-
+dump($fillingIndicator);
         foreach ($fillingIndicator as $key => $row):
 
             $this->startElementNS('find', 'filingIndicator', NULL);
@@ -546,6 +546,7 @@ class CreateXBRLFromDB extends XMLWriter
 
 
         endforeach;
+        
         return $filter;
     }
 
