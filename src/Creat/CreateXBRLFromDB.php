@@ -5,6 +5,7 @@ namespace AReportDpmXBRL\Creat;
 use AReportDpmXBRL\Config\Config;
 use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Library\DomToArray;
+use AReportDpmXBRL\Library\Format;
 use AReportDpmXBRL\Set;
 use XMLWriter;
 
@@ -30,7 +31,7 @@ class CreateXBRLFromDB extends XMLWriter
     private $date;
     private $organisation;
     private $schemaRef;
-    private $fIndicators;
+    private $fIndicators = [];
     private $tempContext = [];
     private $id = 1;
     private $Metric = [];
@@ -448,7 +449,7 @@ class CreateXBRLFromDB extends XMLWriter
                             if ($this->unit[$row['metric']]['format'] == 'pi'):
                                 $this->writeAttribute('decimals', $this->unit[$row['metric']]['decimals']);
                                 $this->writeAttribute('unitRef', 'upure');
-                                $this->writeRaw($row['numeric_value'] / 10000);
+                                $this->writeRaw(floatval($row['numeric_value']) / 100);
                             else:
                                 $this->writeAttribute('decimals', $this->unit[$row['metric']]['decimals']);
                                 $this->writeAttribute('unitRef', 'upure');
@@ -486,26 +487,28 @@ class CreateXBRLFromDB extends XMLWriter
         endforeach;
 
         $element = $module->schema->getElementsByTagNameNS('http://www.w3.org/2001/XMLSchema', 'element')->item(0);
+
         $idElement = $element->getAttribute('id');
 
-        $group = $this->filterGroup($mod['pre'], key(Data::searchLabel($mod['pre'], 'href', $idElement)));
+        $group =
+            $this->filterGroup($mod['pre'], key(Data::searchLabel($mod['pre'], 'href', Format::getAfterSpecChar($idElement, '_'))));
 
 
         $fillingIndicator = array();
+
         foreach ($group as $key => $row):
 
             $find = DomToArray::strpos_arr($row['table'], $this->fIndicators);
 
             if ($find == TRUE || isset($fillingIndicator[$row['group']])):
-                $fillingIndicator[$row['group']] = TRUE;
+                $fillingIndicator[$row['table']] = TRUE;
             else:
-                $fillingIndicator[$row['group']] = FALSE;
+                $fillingIndicator[$row['table']] = FALSE;
             endif;
 
 
         endforeach;
 
-dump($fillingIndicator);
         foreach ($fillingIndicator as $key => $row):
 
             $this->startElementNS('find', 'filingIndicator', NULL);
@@ -522,19 +525,26 @@ dump($fillingIndicator);
         $this->endElement();
     }
 
-    private function filterGroup(array $elements, $parentId = '')
+    /**
+     * @param array $elements
+     * @param string $parentId
+     * @return array
+     */
+    private function filterGroup(array $elements, $parentId = ''): array
     {
         $group = $this->buildGroup($elements, $parentId);
-        $filter = array();
+
+        $filter = [];
         $i = 0;
         foreach ($group as $row):
+
             if (isset($row['children'])):
 
                 foreach ($row['children'] as $el):
 
-                    $filter[$i]['group'] = substr($row['href'], strrpos($row['href'], '_tg') + 3);
+                    $filter[$i]['group'] = Format::getAfterSpecChar($row['href'], '_tg', 3);
 
-                    $filter[$i]['table'] = strtolower(substr($el['href'], strrpos($el['href'], '_t') + 2));
+                    $filter[$i]['table'] = strtolower(Format::getAfterSpecChar($el['href'], '_t', 3));
                     $i++;
                 endforeach;
 
@@ -542,15 +552,15 @@ dump($fillingIndicator);
 
         endforeach;
 
-        foreach ($this->fIndicators as $row):
-
-
-        endforeach;
-        
         return $filter;
     }
 
-    private function buildGroup(array $elements, $parentId = '')
+    /**
+     * @param array $elements
+     * @param string $parentId
+     * @return array
+     */
+    private function buildGroup(array $elements, $parentId = ''): array
     {
         $branch = array();
 
