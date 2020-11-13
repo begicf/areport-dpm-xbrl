@@ -516,7 +516,8 @@ class CreateXBRLFromDB extends XMLWriter
             if ($row === FALSE):
                 $this->writeAttributeNS('find', 'filed', NULL, "false");
             endif;
-            $this->writeRaw($key);
+
+            $this->writeRaw(strtoupper($key));
 
             $this->endElement();
         endforeach;
