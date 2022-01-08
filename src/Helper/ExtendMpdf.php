@@ -39,7 +39,7 @@ class ExtendMpdf extends pdf
      *
      * @param string $pFilename Name of the file to save as
      */
-    public function save($pFilename): void
+    public function save($pFilename, int $flags = 0): void
     {
         $fileHandle = parent::prepareForSave($pFilename);
 
@@ -104,7 +104,6 @@ class ExtendMpdf extends pdf
         $pdf->SetCreator($this->spreadsheet->getProperties()->getCreator());
 
 
-
         $pdf->SetHTMLHeader($this->header());
         $pdf->SetHTMLFooter($this->footer());
 
@@ -112,7 +111,7 @@ class ExtendMpdf extends pdf
         $ortmp = $orientation;
         $pdf->_setPageSize(strtoupper($paperSize), $ortmp);
         $pdf->DefOrientation = $orientation;
-       // $pdf->AddPage($orientation);
+        // $pdf->AddPage($orientation);
 
 
         $html = $this->generateHTMLAll();
@@ -156,7 +155,7 @@ EOT;
 
     private function header()
     {
-        $img=Config::setLogoPath();
+        $img = Config::setLogoPath();
         $header = <<<EOT
                 <div style="font-weight: bold; font-size: 10pt;">
                 <img height="40" width="50" src="{$img}"/>

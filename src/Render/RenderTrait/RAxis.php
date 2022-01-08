@@ -505,11 +505,11 @@ trait RAxis
         $metric = array();
 
         if (!empty($x)):
-            $x = call_user_func_array('array_merge', $x);
+            $x = call_user_func_array('array_merge',array_values($x));
         endif;
 
         if (!empty($y) && !array_key_exists('dimensionAspect', $y)):
-            $y = call_user_func_array('array_merge', $y);
+            $y = call_user_func_array('array_merge', array_values($y));
         endif;
 
 

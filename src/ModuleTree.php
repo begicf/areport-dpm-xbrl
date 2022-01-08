@@ -148,7 +148,7 @@ class ModuleTree
                     if (!isset($row['order']) && isset($row['label'])):
 
                         $name =
-                            (empty($this->lang)) ? $row['label'] : call_user_func_array("array_merge", DomToArray::search_multdim($mod[$this->lang], 'from', $row['label']));
+                            (empty($this->lang)) ? $row['label'] : call_user_func_array("array_merge", array_values(DomToArray::search_multdim($mod[$this->lang], 'from', $row['label'])));
                         $data[] = [
                             'parent' => $id,
                             'children' => true,

@@ -85,7 +85,7 @@ class DefinitionLink implements XbrlInterface
             $loc = $this->reduceLocLable($hyp['link:loc']);
 
             if ($scenario):
-                $metric = call_user_func_array('array_merge', $scenario);
+                $metric = call_user_func_array('array_merge', array_values($scenario));
 
                 $this->hyp[$key] = $this->buildHyp($hyp['link:definitionArc'], $metric['from'], $loc);
             else:
