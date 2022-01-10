@@ -3,9 +3,8 @@
 namespace AReportDpmXBRL;
 
 use AReportDpmXBRL\Library\DomToArray;
-use AReportDpmXBRL\Render\RenderOutput;
 use AReportDpmXBRL\Render\RenderPDF;
-use AReportDpmXBRL\Render\RenderHtmlTable;
+
 
 
 /*
@@ -20,10 +19,11 @@ use AReportDpmXBRL\Render\RenderHtmlTable;
 /**
  * Class Set
  * @category
- * Areport @package AReportDpmXBRL\Config
+ * Areport @package AReportDpmXBRL\Set
  * @author Fuad Begic <fuad.begic@gmail.com>
- * Date: 12/06/2020
+ * Date: 10/01/2022
  */
+
 class Set
 {
 
@@ -160,7 +160,7 @@ class Set
 
 
         foreach ($linkbase as $link) {
-            $path = (dirname($this->schema->baseURI) . DIRECTORY_SEPARATOR . $link->getAttribute('xlink:href'));
+            $path = (dirname($this->schema->baseURI) . '/' . $link->getAttribute('xlink:href'));
             if (strpos($path, 'file:/') !== false):
                 $path = str_replace('file:/', '', $path);
             endif;

@@ -8,19 +8,16 @@ use AReportDpmXBRL\Library\Directory;
 use AReportDpmXBRL\Library\Format;
 use AReportDpmXBRL\Library\Normalise;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 
 /**
  * Class Dimension
  * @category
  * Areport @package AReportDpmXBRL\Config
  * @author Fuad Begic <fuad.begic@gmail.com>
- * Date: 12/06/2020
+ * Date: 10/01/2022
  */
+
 class Dimension
 {
 
@@ -41,7 +38,6 @@ class Dimension
     public static function getDimension($path, $xpathQuery): ?array
     {
 
-
         if ((strpos($path, "http") !== false) or (strpos($path, "https") !== false)):
 
             $path =
@@ -51,7 +47,9 @@ class Dimension
 
         $dimension = array();
 
-        if (file_exists($path)):
+        if (!file_exists($path)){
+            throw new \Exception("File not found! {$path} ");
+        }
 
 
             self::_setPath($path);
@@ -80,8 +78,8 @@ class Dimension
                 $dim = dirname(Normalise::_normalise($path));
                 $type = strtok($dimension['typedDomainRef'], '#');
 
-                $typePath = DIRECTORY_SEPARATOR . Normalise::_normalise($dim . DIRECTORY_SEPARATOR . $type);
-
+                $tmp_path = Normalise::_normalise($dim . DIRECTORY_SEPARATOR . $type);
+                $typePath = (file_exists($tmp_path))? $tmp_path :  '/'.$tmp_path;
 
                 $typ = self::getDimension($typePath, Format::getAfterSpecChar($dimension['typedDomainRef'], '#'));
 
@@ -96,7 +94,7 @@ class Dimension
             endif;
 
             return $dimension;
-        endif;
+
     }
 
     private static function getNamespace()
