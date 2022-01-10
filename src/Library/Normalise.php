@@ -29,26 +29,41 @@ class Normalise
         endif;
     }
 
-    public static function _normalise($path, $encoding = "UTF-8")
+    public static function _normalise($path)
     {
 
+        // Skip invalid input.
+        if (!isset($path)) {
+            return FALSE;
+        }
+        if ($path === '') {
+            return '';
+        }
+
         // Attempt to avoid path encoding problems.
-        $path = iconv($encoding, "$encoding//IGNORE//TRANSLIT", $path);
-        // Process the components
+        $path = preg_replace("/[^\x20-\x7E]/", '', $path);
+        $path = str_replace('\\', '/', $path);
+
+        // Remember path root.
+        $prefix = substr($path, 0, 1) === '/' ? '/' : '';
+
+        // Process path components
+        $stack = array();
         $parts = explode('/', $path);
-        $safe = array();
-        foreach ($parts as $idx => $part) {
-            if (empty($part) || ('.' == $part)) {
-                continue;
-            } elseif ('..' == $part) {
-                array_pop($safe);
-                continue;
+        foreach ($parts as $part) {
+            if ($part === '' || $part === '.') {
+                // No-op: skip empty part.
+            } elseif ($part !== '..') {
+                array_push($stack, $part);
+            } elseif (!empty($stack)) {
+                array_pop($stack);
             } else {
-                $safe[] = $part;
+                return FALSE; // Out of the root.
             }
         }
+
         // Return the "clean" path
-        $path = implode(DIRECTORY_SEPARATOR, $safe);
+        $path = $prefix . implode('/', $stack);
         return $path;
     }
 
