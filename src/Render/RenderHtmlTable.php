@@ -666,12 +666,11 @@ class RenderHtmlTable
                     $value = $this->getValue($name, $def['type_metric'], $dim);
                 endif;
 
-                $input = NULL;
                 $key = array();
 
                 $input = "<input  name='" . $name . "[dim]' value='$dim' type='hidden' />";
 
-                $input .= "<select  $dis class='xbrl-select' id='$name' name='" . $name . "[value]' oninvalid=\"this.setCustomValidity('Molim, odaberite stavku sa liste')\" oninput=\"setCustomValidity('')\" >";
+                $input .= "<select  class='xbrl-select' id='$name' name='" . $name . "[value]' oninvalid=\"this.setCustomValidity('Please select an item from the list')\" oninput=\"setCustomValidity('')\" >";
 
                 $input .= "<option></option>";
 
