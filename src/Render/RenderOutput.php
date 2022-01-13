@@ -327,7 +327,7 @@ class RenderOutput
 
                 //Save the position, if the position has a child elelemt then it is a factor for the number of child elements
                 $tmpPos = NULL;
-                if (isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'):
+                if (isset($this_value['leaves_element'])):
                     $tmpPos = $this->_col + $this_value['leaves_element'] - 1;
                 elseif (isset($this_value['metric_element'])):
                     $tmpPos = $this->_col + $this_value['metric_element'] - 1;
@@ -342,7 +342,7 @@ class RenderOutput
                 $tmpPos = NULL;
                 //If the position is not set and has child elements, set it to the number of child elements plus the number of columns, otherwise only to the number of columns
 
-                if (isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'):
+                if (isset($this_value['leaves_element'])):
                     //If the position has childe elements and if the parent element is filled or has a metric value
                     $tmpPos = $this->_col + $this_value['leaves_element'] - 1;
                 elseif (isset($this_value['metric_element'])):
