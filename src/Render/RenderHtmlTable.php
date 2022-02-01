@@ -333,6 +333,11 @@ class RenderHtmlTable
             // usort($this->col, array($this, "cmp"));
         endif;
 
+        $z = null;
+        if (isset($ZAxis)):
+            $z = $this->getCurrentZAxis($ZAxis, $ZSelect);
+        endif;
+
         ###############XY###############
         if (!is_null($aspectNode)):
             /* Open table */
@@ -394,7 +399,7 @@ class RenderHtmlTable
 
 
                     $dim =
-                        $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $col['id']), $yN, $typ);
+                        $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $col['id']), $yN, $typ, $z);
 
 
                     $def = $this->checkDef($dim);
@@ -417,10 +422,7 @@ class RenderHtmlTable
             endfor;
         else:
             $x = $y = 0;
-            $z = null;
-            if (isset($ZAxis)):
-                $z = $this->getCurrentZAxis($ZAxis, $ZSelect);
-            endif;
+
             foreach ($this->col as $col) {
                 $y = 0;
                 foreach ($this->row as $row) {

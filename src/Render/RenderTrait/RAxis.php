@@ -505,7 +505,7 @@ trait RAxis
         $metric = array();
 
         if (!empty($x)):
-            $x = call_user_func_array('array_merge',array_values($x));
+            $x = call_user_func_array('array_merge', array_values($x));
         endif;
 
         if (!empty($y) && !array_key_exists('dimensionAspect', $y)):
@@ -522,7 +522,9 @@ trait RAxis
         endif;
 
 
-        if (isset($y['dimensionAspect']) && isset($x['dimension'])):
+        if (isset($y['dimensionAspect']) && isset($x['dimension']) && isset($z['dimension'])):
+            $merge = array_merge($metric, (array)$x['dimension'], (array)$z['dimension']);
+        elseif (isset($y['dimensionAspect']) && isset($x['dimension']) && (is_null($z) || empty($z['dimension']))):
             $merge = array_merge($metric, (array)$x['dimension']);
         elseif (isset($x['dimension']) && isset($y['dimension']) && (is_null($z) || empty($z['dimension']))):
             $merge = array_merge($metric, (array)$x['dimension'], (array)$y['dimension']);

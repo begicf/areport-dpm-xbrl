@@ -142,7 +142,7 @@ class RenderOutput
      * @param type $signers
      * @return $this
      */
-    public function renderOutput($import = NULL)
+    public function renderOutput($import = NULL, $ZSelect = null)
     {
 
         $this->setImport($import);
@@ -172,11 +172,11 @@ class RenderOutput
 
         if (isset($this->_aspectNode['y'])):
 
-            $this->drawOpenContent($s, $XAxis);
+            $this->drawOpenContent($s, $XAxis, $ZAxis, $ZSelect);
 
         else:
 
-            $this->drawFixContent($s, $XAxis, $YAxis);
+            $this->drawFixContent($s, $XAxis, $YAxis, $ZAxis, $ZSelect);
         endif;
 
         $this->exportFormat();
@@ -232,7 +232,7 @@ class RenderOutput
             $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 3, $row)->mergeCellsByColumnAndRow(1, 3, $this->_col + $this->_colSpanMax, 3);
 
             if (isset($this->_aspectNode['y'])):
-                $this->drawOpenContent($s, $XAxis);
+                $this->drawOpenContent($s, $XAxis, $ZAxis, $ZSelect);
             else:
 
                 $this->drawFixContent($s, $XAxis, $YAxis, $ZAxis, $ZSelect);
@@ -627,9 +627,13 @@ class RenderOutput
         endif;
     }
 
-    private function drawOpenContent($s, $XAxis)
+    private function drawOpenContent($s, $XAxis, $ZAxis, $ZSelect)
     {
         //////OPEN TABLE/////////
+        $z = null;
+        if (isset($ZAxis)):
+            $z = $this->getCurrentZAxis($ZAxis, $ZSelect);
+        endif;
         $maxRow = $this->getMaxRow($this->import);
 
         $node = ($this->specification['rend']['aspectNode']);
@@ -641,11 +645,9 @@ class RenderOutput
             foreach ($this->col as $this->_col) {
 
                 $name = 'c' . $this->_col['rc-code'] . 'r' . ($y);
+                $typ = null;
 
                 if (isset($node[$this->_col['id']])):
-
-
-                    $typ = null;
 
                     $yN = $node[$this->_col['id']];
 
@@ -680,7 +682,7 @@ class RenderOutput
 
 
                 $dim =
-                    $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), $yN, $typ);
+                    $this->mergeDimensions(DomToArray::search_multdim($XAxis, 'to', $this->_col['id']), $yN, $typ, $z);
 
 
                 $def = $this->checkDef($dim);
