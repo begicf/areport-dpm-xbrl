@@ -42,11 +42,11 @@ class Data
         if (empty($tax->elements) == FALSE):
             $_tax['elements'] = $tax->elements;
         endif;
-
-        foreach ($tax->load() as $key => $row):
-            $_tax[$key] = $row->Xbrl;
-        endforeach;
-
+        if ($tax->load()):
+            foreach ($tax->load() as $key => $row):
+                $_tax[$key] = $row->Xbrl;
+            endforeach;
+        endif;
         return $_tax;
     }
 

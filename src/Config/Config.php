@@ -76,6 +76,12 @@ class Config
                 'prefix' => 'eba',
                 'copyright' => '(C) EBA'
             ],
+            'audt' => [
+                'namespace' => 'http://www.auditchain.finance/',
+                'officialLocation' => 'http://www.auditchain.finance/fr/dpm',
+                'prefix' => 'audt',
+                'copyright' => '(C) Auditchain'
+            ],
         ];
     }
 
