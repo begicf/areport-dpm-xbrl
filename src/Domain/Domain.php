@@ -113,6 +113,9 @@ class Domain
         $pre_ = [];
         $pre__ = [];
 
+        if (empty($hierDef['pre'][$hierarchy]) || !is_array($hierDef['pre'][$hierarchy])) {
+            return [];
+        }
 
         foreach ($hierDef['pre'][$hierarchy] as $key => $hier):
             $search = DomToArray::search_multdim($mem[$lang], 'from', $hier['label']);
