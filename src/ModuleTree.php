@@ -309,6 +309,10 @@ class ModuleTree
         $modules = Directory::getPath($path, ['mod' => 'mod' . DIRECTORY_SEPARATOR]);
         $module = [];
 
+        if (empty($modules['mod'])) {
+            return $module;
+        }
+
         foreach ($modules['mod'] as $key => $mod):
 
             $module[$key] = Data::getTax($mod);

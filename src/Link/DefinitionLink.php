@@ -76,6 +76,10 @@ class DefinitionLink implements XbrlInterface
 
             $this->def[$element->getAttribute('xlink:role')] = $def;
         };
+        if(empty($this->def)){
+            $this->Xbrl = array();
+            return;
+        }
         foreach ($this->def as $key => $hyp):
 
 

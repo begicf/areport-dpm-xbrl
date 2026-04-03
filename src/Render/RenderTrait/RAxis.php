@@ -23,6 +23,204 @@ trait RAxis
 {
     private $tmp = [];
 
+    private function buildLegacyDefinitionMap(array $dimA): array
+    {
+        $dom = [];
+
+        foreach ($dimA as $key => $element) {
+            $p = explode('_', (string) $element);
+
+            if ($key === 'metric') {
+                if ($element != 'false' && isset($p[1])) {
+                    $val = explode(':', $p[1]);
+
+                    if (isset($val[1])) {
+                        $dom['metric'] = $p[0] . '_' . $val[1];
+                    }
+                }
+            } else {
+                if (count($p) == 2) {
+                    $val = explode(':', $p[1]);
+
+                    if (isset($val[0], $val[1])) {
+                        $keyHelp = $p[0] . '_' . $val[0] . ':' . $p[0] . '_' . $val[1];
+                        $keyDim = strtok($key, '_') . '_' . substr($key, strpos($key, ":") + 1);
+                        $dom[$keyDim . ':' . $keyHelp] = $keyDim;
+                    }
+                } elseif (count($p) == 3) {
+                    $val = explode(':', $p[2]);
+
+                    if (isset($val[0], $val[1])) {
+                        $keyHelp = $p[1] . '_' . $val[0] . ':' . $p[0] . '_' . $val[1];
+                        $keyDim = strtok($key, '_') . '_' . substr($key, strpos($key, ":") + 1);
+                        $dom[$keyDim . ':' . $keyHelp] = $keyDim;
+                    }
+                }
+            }
+        }
+
+        return $dom;
+    }
+
+    private function buildNormalizedDefinitionMap(array $dimA): array
+    {
+        $dom = [];
+
+        foreach ($dimA as $key => $element) {
+            if ($key === 'metric') {
+                $metricKey = $this->normalizeMetricKey($element);
+
+                if (!empty($metricKey)) {
+                    $dom['metric'] = $metricKey;
+                }
+            } else {
+                $keyDim = $this->normalizeDimensionKey($key);
+                $memberKey = $this->normalizeDimensionMemberKey($element);
+
+                if (!empty($keyDim) && !empty($memberKey)) {
+                    $dom[$keyDim . ':' . $memberKey] = $keyDim;
+                }
+            }
+        }
+
+        return $dom;
+    }
+
+    private function findDefinitionMatch(array $dom)
+    {
+        $metricKey = $dom['metric'] ?? null;
+
+        if (!empty($metricKey)) {
+            $requestedMemberKeys = array_values(array_filter(array_keys($dom), static function ($key) {
+                return $key !== 'metric';
+            }));
+
+            $bestMatch = false;
+            $bestScore = null;
+
+            foreach ($this->tmp as $item) {
+                if (!isset($item[$metricKey])) {
+                    continue;
+                }
+
+                $missingKeys = array_values(array_filter($requestedMemberKeys, static function ($key) use ($item) {
+                    return !isset($item[$key]);
+                }));
+
+                if (!empty($missingKeys)) {
+                    continue;
+                }
+
+                $itemMemberKeys = $this->extractDefinitionMemberKeys($item);
+                $extraMemberCount = count(array_diff($itemMemberKeys, $requestedMemberKeys));
+                $score = [$extraMemberCount, count($itemMemberKeys)];
+
+                if ($bestScore === null || $score < $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = $item[$metricKey];
+                }
+            }
+
+            if ($bestMatch !== false) {
+                return $bestMatch;
+            }
+        }
+
+        foreach ($this->tmp as $item) {
+            if (isset($dom['metric']) && isset($item[$dom['metric']])):
+                $dif = array_diff_key($item, $dom);
+
+                if (count($dif) == (count($item) - count($dom) + 1)):
+                    return $item[$dom['metric']];
+                endif;
+            endif;
+        }
+
+        return false;
+    }
+
+    private function extractDefinitionMemberKeys(array $item): array
+    {
+        return array_values(array_filter(array_keys($item), static function ($key) {
+            return substr_count((string) $key, ':') >= 2;
+        }));
+    }
+
+    private function stripDefaultDimensions(array $dimA): array
+    {
+        foreach ($dimA as $key => $value) {
+            if ($key === 'metric') {
+                continue;
+            }
+
+            if (is_string($value) && strpos($value, ':') !== false) {
+                $localName = substr($value, strpos($value, ':') + 1);
+
+                if ($localName !== '' && substr($localName, -2) === 'x0') {
+                    unset($dimA[$key]);
+                }
+            }
+        }
+
+        return $dimA;
+    }
+
+    private function normalizeMetricKey($value): ?string
+    {
+        $value = (string) $value;
+
+        if ($value === '' || $value === 'false' || strpos($value, ':') === false) {
+            return null;
+        }
+
+        [$prefix, $local] = explode(':', $value, 2);
+        $root = strtok($prefix, '_');
+
+        if ($root === false || $root === '' || $local === '') {
+            return null;
+        }
+
+        return $root . '_' . $local;
+    }
+
+    private function normalizeDimensionKey($key): ?string
+    {
+        $key = (string) $key;
+
+        if ($key === '' || strpos($key, ':') === false) {
+            return null;
+        }
+
+        $root = strtok($key, '_');
+        $local = substr($key, strpos($key, ':') + 1);
+
+        if ($root === false || $root === '' || $local === '') {
+            return null;
+        }
+
+        return $root . '_' . $local;
+    }
+
+    private function normalizeDimensionMemberKey($value): ?string
+    {
+        $value = (string) $value;
+
+        if ($value === '' || $value === 'false' || strpos($value, ':') === false) {
+            return null;
+        }
+
+        [$prefix, $local] = explode(':', $value, 2);
+        $parts = explode('_', $prefix);
+        $root = $parts[0] ?? null;
+        $domain = $parts[1] ?? null;
+
+        if (empty($root) || empty($domain) || $local === '') {
+            return null;
+        }
+
+        return $root . '_' . $domain . ':' . $root . '_' . $local;
+    }
+
     public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array())
     {
         $branch = array();
@@ -261,13 +459,7 @@ trait RAxis
                     Data::searchLabel($this->specification[$this->lang], 'href', Format::getAfterSpecChar($value, '_'));
 
 
-                foreach ($found as $value):
-
-                    if ($value['role'] == $role):
-
-                        return $value['@content'];
-                    endif;
-                endforeach;
+                return $this->pickPreferredLabel($found, $role);
 
                 break;
 
@@ -364,6 +556,39 @@ trait RAxis
         endswitch;
     }
 
+    private function pickPreferredLabel($found, $role)
+    {
+        if (empty($found) || !is_array($found)):
+            return null;
+        endif;
+
+        $genericLabels = ['rows', 'columns', 'sheets'];
+        $fallback = null;
+
+        foreach ($found as $value):
+
+            if (($value['role'] ?? null) != $role):
+                continue;
+            endif;
+
+            $content = trim($value['@content'] ?? '');
+
+            if ($content === ''):
+                continue;
+            endif;
+
+            if (is_null($fallback)):
+                $fallback = $content;
+            endif;
+
+            if (!in_array(strtolower($content), $genericLabels, true)):
+                return $content;
+            endif;
+        endforeach;
+
+        return $fallback;
+    }
+
     /**
      * @return array
      */
@@ -398,46 +623,10 @@ trait RAxis
 
         $this->specification['def'];
 
-
         $dimA = json_decode($dim, true);
-        $dom = array();
-
-
-        $metric = null;
-        foreach ($dimA as $key => $element):
-            $p = explode('_', $element);
-
-            if ($key === 'metric'):
-
-                if ($element != 'false'):
-
-                    $val = explode(':', $p[1]);
-                    $key_help = $p[0] . '_' . $val[1];
-                    $metric = $key_help;
-                    $dom['metric'] = $key_help;
-
-                endif;
-            else:
-
-                if (count($p) == 2):
-
-                    $val = explode(':', $p[1]);
-
-                    $key_help = $p[0] . '_' . $val[0] . ':' . $p[0] . '_' . $val[1];
-                    $keyDim = strtok($key, '_') . '_' . substr($key, strpos($key, ":") + 1);
-                    $dom[$keyDim . ':' . $key_help] = $keyDim;
-
-                elseif (count($p) == 3):
-
-                    $val = explode(':', $p[2]);
-                    $key_help = $p[1] . '_' . $val[0] . ':' . $p[0] . '_' . $val[1];
-                    $keyDim = strtok($key, '_') . '_' . substr($key, strpos($key, ":") + 1);
-                    $dom[$keyDim . ':' . $key_help] = $keyDim;
-
-                endif;
-            endif;
-
-        endforeach;
+        if (!is_array($dimA)) {
+            return false;
+        }
 
         if (empty($this->tmp)):
             foreach ($this->specification['def'] as $key => &$val):
@@ -451,17 +640,24 @@ trait RAxis
             endforeach;
         endif;
 
-        foreach ($this->tmp as $index => $item) {
-            if (isset($dom['metric']) && isset($item[$dom['metric']])):
+        $candidates = [$dimA];
+        $reduced = $this->stripDefaultDimensions($dimA);
 
-                $dif = array_diff_key($item, $dom);
-
-                if (count($dif) == (count($item) - count($dom) + 1)):
-                    return $item[$dom['metric']];
-                endif;
-            endif;
+        if ($reduced !== $dimA) {
+            $candidates[] = $reduced;
         }
 
+        foreach ($candidates as $candidate) {
+            $legacy = $this->findDefinitionMatch($this->buildLegacyDefinitionMap($candidate));
+            if ($legacy !== false) {
+                return $legacy;
+            }
+
+            $normalized = $this->findDefinitionMatch($this->buildNormalizedDefinitionMap($candidate));
+            if ($normalized !== false) {
+                return $normalized;
+            }
+        }
 
         return false;
     }

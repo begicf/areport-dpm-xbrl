@@ -72,25 +72,28 @@ class Metric
             }
 
             if (!empty($metric['domain'])):
-
                 $hier = self::hier($metric['domain'], $xpath);
-
             endif;
 
-            $host = Format::getHostFromUrl($metric['hierarchy']);
+            $host = !empty($metric['hierarchy']) ? Format::getHostFromUrl($metric['hierarchy']) : null;
 
-            if (isset($hier[$host]['def'][$metric['hierarchy']])):
-
+            if (!empty($host) && isset($hier[$host]['def'][$metric['hierarchy']])):
                 $mem = Domain::mem(dirname($hier[$host]['dir']) . DIRECTORY_SEPARATOR . 'mem.xsd');
 
                 $metric['namespace'] = $mem['namespace'];
                 $metric['imports'] = $mem['imports'];
-
-
                 $metric['presentation'] = Domain::getHierarchyPresentation($metric['hierarchy'], $hier[$host], $mem);
-
             endif;
 
+            if (empty($metric['presentation']) && !empty($metric['hierarchy'])):
+                $resolved = Domain::resolveHierarchyData($metric['hierarchy'], Directory::getRootName(self::$path));
+
+                if (!empty($resolved['presentation'])):
+                    $metric['namespace'] = $resolved['namespace'];
+                    $metric['imports'] = $resolved['imports'];
+                    $metric['presentation'] = $resolved['presentation'];
+                endif;
+            endif;
 
             return $metric;
         endif;
