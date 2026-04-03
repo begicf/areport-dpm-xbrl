@@ -542,11 +542,11 @@ class RenderOutput
                 elseif ($bold == TRUE):
 
                     $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1 + $_col, $_row, $str)->getStyleByColumnAndRow(1 + $_col, $_row)->applyFromArray($this->abstractYBold());
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($_col, $_row, $rcCode, DataType::TYPE_STRING)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->styleRC());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($_col, $_row, $rcCode, DataType::TYPE_STRING)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->styleRC());
                 else:
 
                     $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1 + $_col, $_row, $str)->getStyleByColumnAndRow(1 + $_col, $_row)->applyFromArray($this->styleY());
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($_col, $_row, $rcCode, DataType::TYPE_STRING)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->styleRC());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($_col, $_row, $rcCode, DataType::TYPE_STRING)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->styleRC());
 
                 endif;
 

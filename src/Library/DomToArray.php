@@ -19,6 +19,11 @@ use AReportDpmXBRL\Config\Config;
  */
 class DomToArray
 {
+    private static function normalizePathFragment($path): string
+    {
+        return trim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, (string) $path), DIRECTORY_SEPARATOR);
+    }
+
     /*
      * @return DomDocument
      */
@@ -137,38 +142,83 @@ class DomToArray
 
     public static function getPath($path, $string = array(), $return = NULL)
     {
-
-
         $rii = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path));
-        $ext = array('xsd');
-        $content = NULL;
-        $dir = array();
+        $ext = ['xsd'];
+        $dir = [];
+        $legacyMatches = [];
+        $root = rtrim(self::normalizePathFragment($path), DIRECTORY_SEPARATOR);
+        $patterns = [];
+
+        foreach ($string as $key => $str) {
+            $patterns[$key] = self::normalizePathFragment($str);
+        }
 
         foreach ($rii as $file) :
 
             if ($file->isDir()) {
                 continue;
             }
-            $content = $file->getPathname();
+
+            $content = self::normalizePathFragment($file->getPathname());
             $tmpPath = pathinfo($content);
 
-            foreach ($string as $key => $str):
+            if (!isset($tmpPath['extension']) || !in_array($tmpPath['extension'], $ext, true)) {
+                continue;
+            }
 
-                if (strpos($content, $str) !== false) :
+            $relativePath = ltrim(substr($content, strlen($root)), DIRECTORY_SEPARATOR);
+            $relativeDir = self::normalizePathFragment($tmpPath['dirname'] ?? '');
 
-                    /* @var $tmpPath type pathifno */
+            if ($relativeDir === '.') {
+                $relativeDir = '';
+            }
 
-                    if (in_array($tmpPath['extension'], $ext)):
-                        if ($return == NULL):
-                            $dir[$key][] = $content;
-                        else:
-                            return $content;
-                        endif;
+            if ($root !== '' && str_starts_with($relativeDir, $root . DIRECTORY_SEPARATOR)) {
+                $relativeDir = ltrim(substr($relativeDir, strlen($root)), DIRECTORY_SEPARATOR);
+            }
+
+            foreach ($patterns as $key => $pattern):
+                if ($pattern === '') {
+                    continue;
+                }
+
+                $hasExactMatch =
+                    $relativeDir === $pattern
+                    || $relativePath === $pattern;
+
+                if ($hasExactMatch) {
+                    if ($return == NULL):
+                        $dir[$key][] = $file->getPathname();
+                    else:
+                        return $file->getPathname();
                     endif;
-                endif;
+
+                    continue;
+                }
+
+                if (strpos($content, $pattern) !== false) {
+                    $legacyMatches[$key][] = $file->getPathname();
+                }
             endforeach;
         endforeach;
-        return $dir;
+
+        if ($return == NULL):
+            foreach ($patterns as $key => $pattern) {
+                if (!isset($dir[$key]) && isset($legacyMatches[$key])) {
+                    $dir[$key] = $legacyMatches[$key];
+                }
+            }
+
+            return $dir;
+        endif;
+
+        foreach ($patterns as $key => $pattern) {
+            if (isset($legacyMatches[$key][0])) {
+                return $legacyMatches[$key][0];
+            }
+        }
+
+        return null;
     }
 
     public static function build_url(array $parts)

@@ -74,12 +74,29 @@ trait RTrait
         return $tableLabelName = $this->specification['rend']['table'][$this->tableNameId()]['label'];
     }
 
+    private function normalizeTableDisplayName(?string $name): ?string
+    {
+        if ($name === null) {
+            return null;
+        }
+
+        return preg_replace('/^[A-Z]+(?:_[0-9A-Za-z]+)+(?:\.[0-9A-Za-z]+)+:\s*/', '', $name) ?? $name;
+    }
+
     /**
      * @return string|null name
      */
     public function tableName(): ?string
     {
         return $this->searchLabel($this->tableLabelName(), 'http://www.xbrl.org/2008/role/label');
+    }
+
+    /**
+     * @return string|null name for UI display
+     */
+    public function tableDisplayName(): ?string
+    {
+        return $this->normalizeTableDisplayName($this->tableName());
     }
 
     /**

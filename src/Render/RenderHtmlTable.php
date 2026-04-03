@@ -13,6 +13,7 @@ use AReportDpmXBRL\HTMLTable\HTMLTable;
 use AReportDpmXBRL\Library\Directory;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Format;
+use AReportDpmXBRL\Library\TableJsonMetadata;
 use AReportDpmXBRL\Render\RenderTrait\RAxis;
 use AReportDpmXBRL\Render\RenderTrait\RTrait;
 
@@ -39,6 +40,7 @@ class RenderHtmlTable
     private $sheet;
 
     private $roleType = [];
+    private $tableJsonMetadata;
 
     private function setImport($import)
     {
@@ -53,6 +55,7 @@ class RenderHtmlTable
 
     public function renderHtml($import = NULL, $ZSelect = null)
     {
+        $this->tableJsonMetadata = new TableJsonMetadata($this->specification['tab_xsd_uri'] ?? ($this->additionalData['file_path'] ?? null));
 
         $this->roleType = array_keys($this->specification['def']);
 
@@ -80,7 +83,7 @@ class RenderHtmlTable
             $this->searchLabel($this->specification['rend']['path'] . "#" . $tableLabelName, 'http://www.eba.europa.eu/xbrl/role/dpm-db-id');
 
 
-        $tableName = $this->tableName();
+        $tableName = $this->tableDisplayName();
         $labelFullName = $this->searchLabel($tableLabelName, 'http://www.xbrl.org/2008/role/verboseLabel');
 
         $this->breakdownTreeArc =
@@ -150,9 +153,12 @@ class RenderHtmlTable
         $col = 0;
         $storPosition = array();
 
-        $head->setHeaderContents(0, 0, $this->searchLabel($tableNameId, 'http://www.xbrl.org/2008/role/label'), array('colspan' => $colspanMax, 'class' => 'xbrl-title', 'rowspan' => ((!is_null($aspectNode)) ? $rowspanMax : $rowspanMax + 1)));
+        $head->setHeaderContents(0, 0, $tableName, array('colspan' => $colspanMax, 'class' => 'xbrl-title', 'rowspan' => ((!is_null($aspectNode)) ? $rowspanMax : $rowspanMax + 1)));
 
-        $head->setHeaderContents(1, 0, $this->searchLabel($this->specification['rend']['path'] . "#" . $tableNameId, 'http://www.xbrl.org/2008/role/verboseLabel'), array('colspan' => $colspanMax, 'rowspan' => ((!is_null($aspectNode)) ? $rowspanMax - 1 : $rowspanMax), 'class' => 'xbrl-th'));
+        $verboseRowspan = ((!is_null($aspectNode)) ? $rowspanMax - 1 : $rowspanMax);
+        if ($verboseRowspan > 0):
+            $head->setHeaderContents(1, 0, $this->searchLabel($this->specification['rend']['path'] . "#" . $tableNameId, 'http://www.xbrl.org/2008/role/verboseLabel'), array('colspan' => $colspanMax, 'rowspan' => $verboseRowspan, 'class' => 'xbrl-th'));
+        endif;
         $keys = array_keys($XAxis);
 
         //X axis
@@ -299,11 +305,29 @@ class RenderHtmlTable
                             ($row['col'] < $YAxis[$y + 1]['col'] && $YAxis[$y + 1]['abstract'] != 'true') ? TRUE : FALSE;
                     endif;
 
+                    $cellClasses = ['xbrl-none-left'];
+
+                    if ($row['abstract'] == 'true' || $bold) {
+                        $cellClasses[] = 'xbrl-bold';
+                    }
+
+                    if ($row['abstract'] == 'true') {
+                        $cellClasses[] = 'xbrl-row-abstract';
+                    }
+
+                    if ($bold) {
+                        $cellClasses[] = 'xbrl-row-parent';
+                    }
+
+                    if (($row['metric'] ?? 'false') != 'false') {
+                        $cellClasses[] = 'xbrl-row-has-metric';
+                    }
+
                     $body->setCellContents($y, 1 + $row['col'], (empty($labelName)) ? $row['to'] : $labelName);
                     $body->setCellAttributes($y, 1 + $row['col'], array(
                         'data-id' => $row['to'],
                         'colspan' => $colspanMax - $row['col'] - 1,
-                        'class' => ($row['abstract'] == 'true' || $bold) ? 'xbrl-bold xbrl-none-left' : 'xbrl-none-left',
+                        'class' => implode(' ', $cellClasses),
                         //'metric' => ($row['metric'] == 'false') ? '' : $row['metric'],
                         //   'dimension' => json_encode($row['dimension']),
                     ));
@@ -404,11 +428,22 @@ class RenderHtmlTable
 
                     $def = $this->checkDef($dim);
 
-                    $input = $this->getType($name, $def, $dim, $additional);
+                    $input = $this->getType($name, $def, $dim, array_merge($additional, [
+                        'column_code' => 'c' . $col['rc-code'],
+                    ]));
 
                     if (isset($col['labelName'])):
+                        $headerLabel = $col['labelName'];
 
-                        $head->setHeaderContents($rowspanMax, $x, $col['labelName'], array('class' => 'xbrl-title', 'data-col' => $abstractCol));
+                        if (!empty($col['rc-code'])) {
+                            $headerLabel .= ' (' . $col['rc-code'] . ')';
+                        }
+
+                        $head->setHeaderContents($rowspanMax, $x, $headerLabel, array(
+                            'class' => 'xbrl-th',
+                            'data-col' => $abstractCol,
+                            'data-id' => $col['id'] ?? '',
+                        ));
                     endif;
                     $abstractCol++;
                     $body->setCellContents($y, $x, $input);
@@ -443,7 +478,9 @@ class RenderHtmlTable
 
                     if ($disabled !== 'disabled'):
 
-                        $input = $this->getType($name, $def, $dim);
+                        $input = $this->getType($name, $def, $dim, [
+                            'column_code' => 'c' . $col['rc-code'],
+                        ]);
                         $body->setCellContents($y, $colspanMax + $x, $input);
                         $body->setCellAttributes($y, $colspanMax + $x, array(
                             'class' => 'xbrl-td',
@@ -459,7 +496,7 @@ class RenderHtmlTable
 
                         $body->setCellContents($y, $colspanMax + $x, '');
                         $body->setCellAttributes($y, $colspanMax + $x, array(
-                            'class' => 'xbrl-td', 'bgcolor' => '#808080'
+                            'class' => 'xbrl-td xbrl-td-disabled'
                             //'dimension' => $dim,
                         ));
                     endif;
@@ -482,7 +519,7 @@ class RenderHtmlTable
         $ZSelect=json_decode($ZSelect,true);
         $html = NULL;
 
-        $html .= "<select class='selectpicker' data-show-icon='true' id='sheet' name='sheet' >";
+        $html .= "<select class='form-select app-sheet-select' id='sheet' name='sheet' aria-label='Table sheet selector'>";
         $shee = 1;
 
         foreach ($ZAxis as $sheet):
@@ -525,7 +562,7 @@ class RenderHtmlTable
         $dom = strtok($dimension[$dim], ':');
 
 
-        $html .= "<select class='selectpicker' data-show-icon='true' id='sheet' name='sheet' >";
+        $html .= "<select class='form-select app-sheet-select' id='sheet' name='sheet' aria-label='Table sheet selector'>";
         $shee = 1;
 
         foreach ($ZAxis as $sheet):
@@ -602,8 +639,7 @@ class RenderHtmlTable
 
         //$readonly = 'readonly';
 
-
-        $input = "<input  name='" . $name . "[dim]' value='$dim' type='hidden' />";
+        $input = $this->buildHiddenDimensionInput($name, $dim, $additional);
 
         if (isset($def['type_metric'])):
             $value = $this->getValue($name, $def['type_metric'], $dim);
@@ -670,7 +706,7 @@ class RenderHtmlTable
 
                 $key = array();
 
-                $input = "<input  name='" . $name . "[dim]' value='$dim' type='hidden' />";
+                $input = $this->buildHiddenDimensionInput($name, $dim, $additional);
 
                 $input .= "<select  class='xbrl-select' id='$name' name='" . $name . "[value]' oninvalid=\"this.setCustomValidity('Please select an item from the list')\" oninput=\"setCustomValidity('')\" >";
 
@@ -703,6 +739,29 @@ class RenderHtmlTable
             $input .= "<input  disabled name='$name' type='text' class='xbrl-input' />";
             return $input;
         endif;
+    }
+
+    private function buildHiddenDimensionInput($name, $dim, $additional = null)
+    {
+        $payload = json_decode($dim, true);
+
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $columnCode = $additional['column_code'] ?? null;
+
+        if (!empty($columnCode) && $this->tableJsonMetadata instanceof TableJsonMetadata && $this->tableJsonMetadata->isLoaded()) {
+            $meta = $this->tableJsonMetadata->matchForCell($columnCode, $payload);
+
+            if (!empty($meta)) {
+                $payload['__meta'] = $meta;
+            }
+        }
+
+        $encoded = htmlspecialchars(json_encode($payload), ENT_QUOTES, 'UTF-8');
+
+        return "<input  name='" . $name . "[dim]' value='$encoded' type='hidden' />";
     }
 
     private function cmp($a, $b)

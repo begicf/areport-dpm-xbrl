@@ -185,7 +185,7 @@ class CreateXBRLFromDB extends XMLWriter
             'xlink', 'type', NULL, 'simple'
         );
         $this->writeAttributeNS(
-            'xlink', 'href', NULL, "http://" . strstr($this->schemaRef, 'www')
+            'xlink', 'href', NULL, $this->toOfficialUrl($this->schemaRef)
         );
         $this->endElement();
     }
@@ -266,7 +266,7 @@ class CreateXBRLFromDB extends XMLWriter
                 case 'upure':
                     $this->startElementNS('xbrli', 'unit', NULL);
                     $this->writeAttribute(
-                        'id', 'upure'
+                        'id', 'uPURE'
                     );
                     $this->writeElementNs('xbrli', 'measure', NULL, 'xbrli:pure');
                     $this->endElement();
@@ -294,16 +294,16 @@ class CreateXBRLFromDB extends XMLWriter
 
         $this->startElementNS('xbrli', 'context', NULL);
         $this->writeAttribute(
-            'id', 'cfin'
+            'id', 'cfi'
         );
 
         //entity
         $this->startElementNS('xbrli', 'entity', NULL);
         $this->startElementNS('xbrli', 'identifier', NULL);
         $this->writeAttribute(
-            'scheme', 'http://standards.iso.org/iso/17442'
+            'scheme', $this->entityIdentifierScheme()
         );
-        $this->writeRaw($this->organisation);
+        $this->writeRaw($this->normalizeEntityIdentifierValue($this->organisation));
         $this->endElement();
         $this->endElement();
 
@@ -354,9 +354,9 @@ class CreateXBRLFromDB extends XMLWriter
                     $this->startElementNS('xbrli', 'entity', NULL);
                     $this->startElementNS('xbrli', 'identifier', NULL);
                     $this->writeAttribute(
-                        'scheme', 'http://standards.iso.org/iso/17442'
+                        'scheme', $this->entityIdentifierScheme()
                     );
-                    $this->writeRaw($this->organisation);
+                    $this->writeRaw($this->normalizeEntityIdentifierValue($this->organisation));
                     $this->endElement();
                     $this->endElement();
 
@@ -365,44 +365,35 @@ class CreateXBRLFromDB extends XMLWriter
                     $this->writeElementNS('xbrli', 'instant', NULL, date('Y-m-d', strtotime($this->date)));
                     $this->endElement();
 
-                    //scenario
-                    $this->startElement('xbrli:scenario');
+                    $scenarioMembers = $this->collectScenarioMembers($arr);
 
+                    if (!empty($scenarioMembers)) {
+                        $this->startElement('xbrli:scenario');
 
-                    foreach ($arr as $k => $scenario):
+                        foreach ($scenarioMembers as $member):
+                            if ($member['type'] === 'explicit') {
+                                $this->startElementNS('xbrldi', 'explicitMember', NULL);
+                                $this->writeAttribute('dimension', $member['dimension']);
+                                $this->writeRaw($member['value']);
+                                $this->endElement();
+                                continue;
+                            }
 
+                            $this->startElementNS('xbrldi', 'typedMember', NULL);
+                            $this->writeAttribute('dimension', $member['dimension']);
 
-                        if (!is_array($scenario) && strpos($scenario, ':x0') == false):
+                            $typMember = explode(':', $member['typed']['typ']);
 
-                            $this->startElementNS('xbrldi', 'explicitMember', NULL);
-                            $this->writeAttribute('dimension', $k);
-                            $this->writeRaw($scenario);
+                            $this->startElementNS($typMember[0], $typMember[1], NULL);
+                            $this->writeRaw($member['typed']['value']);
                             $this->endElement();
+                            $this->endElement();
+                        endforeach;
 
-                        elseif (is_array($scenario)):
-
-                            foreach ($scenario as $member => $typ):
-
-                                $this->startElementNS('xbrldi', 'typedMember', NULL);
-
-                                $this->writeAttribute('dimension', $member);
-
-                                $typMember = explode(':', $typ['typ']);
-
-                                $this->startElementNS($typMember[0], $typMember[1], NULL);
-
-                                $this->writeRaw($typ['value']);
-                                $this->endElement();
-                                $this->endElement();
-
-                            endforeach;
-
-                        endif;
-
-                    endforeach;
+                        $this->endElement();
+                    }
 
                     $this->id++;
-                    $this->endElement();
                     $this->endElement();
 
                 endif;
@@ -448,11 +439,11 @@ class CreateXBRLFromDB extends XMLWriter
                         case 'upure':
                             if ($this->unit[$row['metric']]['format'] == 'pi'):
                                 $this->writeAttribute('decimals', $this->unit[$row['metric']]['decimals']);
-                                $this->writeAttribute('unitRef', 'upure');
+                                $this->writeAttribute('unitRef', 'uPURE');
                                 $this->writeRaw(floatval($row['numeric_value']) / 100);
                             else:
                                 $this->writeAttribute('decimals', $this->unit[$row['metric']]['decimals']);
-                                $this->writeAttribute('unitRef', 'upure');
+                                $this->writeAttribute('unitRef', 'uPURE');
                                 $this->writeRaw((int)$row['numeric_value']);
                             endif;
                             break;
@@ -474,51 +465,25 @@ class CreateXBRLFromDB extends XMLWriter
     {
         $this->startElementNS('find', 'fIndicators', NULL);
 
+        $fillingIndicator = [];
 
-        $module =
-            new Set(Config::publicDir() . $this->moduleDir . DIRECTORY_SEPARATOR . $this->schemaRef, Config::$moduleSet);
+        foreach ((array) $this->fIndicators as $path):
+            $code = $this->normalizeFilingIndicatorCode($path);
 
+            if ($code === '') {
+                continue;
+            }
 
-        $mod = array();
-
-        foreach ($module->load() as $key => $row):
-            $mod[$key] = $row->Xbrl;
-
+            $fillingIndicator[$code] = TRUE;
         endforeach;
 
-        $element = $module->schema->getElementsByTagNameNS('http://www.w3.org/2001/XMLSchema', 'element')->item(0);
-
-        $idElement = $element->getAttribute('id');
-
-        $group =
-            $this->filterGroup($mod['pre'], key(Data::searchLabel($mod['pre'], 'href', Format::getAfterSpecChar($idElement, '_'))));
-
-
-        $fillingIndicator = array();
-
-        foreach ($group as $key => $row):
-
-            $find = DomToArray::strpos_arr($row['table'], $this->fIndicators);
-
-            if ($find == TRUE || isset($fillingIndicator[$row['group']])):
-                $fillingIndicator[$row['table']] = TRUE;
-            else:
-                $fillingIndicator[$row['table']] = FALSE;
-            endif;
-
-
-        endforeach;
+        ksort($fillingIndicator, SORT_NATURAL);
 
         foreach ($fillingIndicator as $key => $row):
 
             $this->startElementNS('find', 'filingIndicator', NULL);
-            $this->writeAttribute('contextRef', 'cfin');
-            if ($row === FALSE):
-                $this->writeAttributeNS('find', 'filed', NULL, "false");
-            endif;
-
-            $this->writeRaw(strtoupper($key));
-
+            $this->writeAttribute('contextRef', 'cfi');
+            $this->writeRaw($key);
             $this->endElement();
         endforeach;
 
@@ -576,6 +541,92 @@ class CreateXBRLFromDB extends XMLWriter
         }
 
         return $branch;
+    }
+
+    private function collectScenarioMembers(array $context): array
+    {
+        $members = [];
+
+        foreach ($context as $dimension => $scenario) {
+            if (is_array($scenario)) {
+                foreach ($scenario as $typedDimension => $typedMember) {
+                    if (!is_array($typedMember) || empty($typedMember['typ'])) {
+                        continue;
+                    }
+
+                    $members[] = [
+                        'type' => 'typed',
+                        'dimension' => $typedDimension,
+                        'typed' => $typedMember,
+                    ];
+                }
+
+                continue;
+            }
+
+            if (!is_string($scenario) || $this->isDefaultDimensionMember($scenario)) {
+                continue;
+            }
+
+            $members[] = [
+                'type' => 'explicit',
+                'dimension' => $dimension,
+                'value' => $scenario,
+            ];
+        }
+
+        return $members;
+    }
+
+    private function isDefaultDimensionMember(string $value): bool
+    {
+        $member = strstr($value, ':');
+
+        if ($member === false) {
+            return false;
+        }
+
+        $member = ltrim($member, ':');
+
+        return in_array($member, ['x0', 'qx0'], true);
+    }
+
+    private function toOfficialUrl(string $path): string
+    {
+        if (strpos($path, 'http://') === 0 || strpos($path, 'https://') === 0) {
+            return $path;
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+        $position = strpos($normalized, 'www.');
+
+        if ($position !== false) {
+            return 'http://' . substr($normalized, $position);
+        }
+
+        return $normalized;
+    }
+
+    private function entityIdentifierScheme(): string
+    {
+        return 'https://eurofiling.info/eu/rs';
+    }
+
+    private function normalizeEntityIdentifierValue(string $value): string
+    {
+        if (strpos($value, ':') === false) {
+            return $value;
+        }
+
+        return substr($value, strpos($value, ':') + 1);
+    }
+
+    private function normalizeFilingIndicatorCode(string $path): string
+    {
+        $code = strtoupper(pathinfo(basename($path), PATHINFO_FILENAME));
+        $code = preg_replace('/\.([A-Z])$/', '', $code);
+
+        return $code ?? '';
     }
 
 }
