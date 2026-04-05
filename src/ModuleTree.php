@@ -138,6 +138,7 @@ class ModuleTree
         $module = $this->fetchModule($path);
 
         foreach ($module as $mod):
+            $moduleNodeCount = 0;
 
             $this->lang = Library\Data::checkLang($mod);
 
@@ -146,24 +147,31 @@ class ModuleTree
 
 
                     if (!isset($row['order']) && isset($row['label'])):
-
-                        $name =
-                            (empty($this->lang)) ? $row['label'] : call_user_func_array("array_merge", array_values(DomToArray::search_multdim($mod[$this->lang], 'from', $row['label'])));
+                        $name = $this->resolveLocatorLabelContent($mod, $row['label'], $row['href'] ?? null);
                         $data[] = [
                             'parent' => $id,
                             'children' => true,
                             'data' => $path,
                             'id' => $id . '#' . $row['label'],
                             'ext' => 'tab',
-                            "text" => (empty($this->lang)) ? $row['label'] : $name['@content'],
+                            "text" => $name ?? $this->normalizeDisplayTitle($row['label']),
                             "mod" => ((is_file($mod['mod_path'])) ? $mod['mod_path'] : Config::publicDir() . DIRECTORY_SEPARATOR . $mod['mod_path']),
                             'type' => 'mod'
                         ];
+                        $moduleNodeCount++;
 
                     endif;
 
                 endforeach;
             endif;
+
+            if ($moduleNodeCount === 0) {
+                $fallbackNode = $this->buildModuleNodeFromMetadata($id, $path, $mod);
+
+                if (!empty($fallbackNode)) {
+                    $data[] = $fallbackNode;
+                }
+            }
         endforeach;
 
         return $data;
@@ -249,13 +257,6 @@ class ModuleTree
 
                             }
 
-                            $ext_code = null;
-                            if (isset($linkSource['lab-codes'])):
-                                $ext_code =
-                                    DomToArray::search_multdim_multival($linkSource['lab-codes'], $row['label'], 'http://www.eba.europa.eu/xbrl/role/dpm-db-id');
-
-                            endif;
-
                             //Get XBRL specification destination
                             $linkDestination = Data::getTax($getFileXsdSource, Data::getLangSpec('mod'));
 
@@ -266,9 +267,7 @@ class ModuleTree
 
 
                             try {
-
-                                $name =
-                                    (empty($this->lang)) ? $row['label'] : current(DomToArray::search_multdim($link[$this->lang], 'from', $row['label']));
+                                $name = $this->resolveLocatorLabelContent($link, $row['label'], $row['href'] ?? null);
 
                             } catch (\Exception $e) {
                                 throw new \Exception('The name is not set for: ' . $row['label']);
@@ -282,8 +281,7 @@ class ModuleTree
                             'data' => $path,
                             'lang' => preg_replace('/lab-/', '', $this->lang, 1),
                             'id' => $row['to'],
-                            'ext_code' => $ext_code,
-                            "text" => (empty($name)) ? $row['href'] : $name['@content'],
+                            "text" => $name ?? $this->normalizeDisplayTitle($row['href']),
                             "table_xsd" => $pathXsd,
                             'type' => $type
                         ];
@@ -294,6 +292,15 @@ class ModuleTree
             endif;
 
         endforeach;
+
+        if (!empty($data)) {
+            ksort($data);
+            return array_values($data);
+        }
+
+        if (!empty($modulePath)) {
+            return $this->buildJsonFallbackTableNodes($id, $modulePath, $path);
+        }
 
         return $data;
 
@@ -322,6 +329,250 @@ class ModuleTree
 
         return $module;
 
+    }
+
+    public static function getModuleTableMapFromJson(string $modulePath): array
+    {
+        $jsonPath = self::getModuleJsonPath($modulePath);
+
+        if (empty($jsonPath) || !is_file($jsonPath)) {
+            return [];
+        }
+
+        $decoded = json_decode((string) file_get_contents($jsonPath), true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $tablePaths = [];
+
+        foreach (($decoded['documentInfo']['extends'] ?? []) as $extendPath) {
+            if (!is_string($extendPath) || substr($extendPath, -5) !== '.json') {
+                continue;
+            }
+
+            if (strpos($extendPath, 'FilingIndicators.json') !== false || strpos($extendPath, 'FootNotes.json') !== false) {
+                continue;
+            }
+
+            $localJsonPath = self::resolveRelativeFile(dirname($jsonPath), $extendPath);
+
+            if ($localJsonPath === null) {
+                continue;
+            }
+
+            $localXsdPath = preg_replace('/\.json$/', '.xsd', $localJsonPath);
+
+            if ($localXsdPath === null || !is_file($localXsdPath)) {
+                continue;
+            }
+
+            $tableCode = strtoupper(pathinfo($localXsdPath, PATHINFO_FILENAME));
+            $tablePaths[$tableCode] = $localXsdPath;
+        }
+
+        return $tablePaths;
+    }
+
+    private function buildJsonFallbackTableNodes(string $id, string $modulePath, string $path): array
+    {
+        $tableMap = self::getModuleTableMapFromJson($modulePath);
+        $data = [];
+
+        foreach ($tableMap as $tableCode => $tableXsdPath) {
+            $label = self::getTableDisplayName($tableXsdPath);
+
+            $data[] = [
+                'parent' => $id,
+                'children' => false,
+                'data' => $path,
+                'lang' => 'en',
+                'id' => $id . '#' . preg_replace('/[^a-zA-Z0-9]+/', '', $tableCode),
+                'text' => $label ?: $tableCode,
+                'table_xsd' => $tableXsdPath,
+                'type' => 'file',
+            ];
+        }
+
+        usort($data, function ($left, $right) {
+            return strnatcasecmp((string) $left['text'], (string) $right['text']);
+        });
+
+        return $data;
+    }
+
+    private function buildModuleNodeFromMetadata(string $id, string $path, array $module): ?array
+    {
+        $modulePath = $module['mod_path'] ?? null;
+
+        if (!is_string($modulePath) || $modulePath === '') {
+            return null;
+        }
+
+        $displayName = $this->resolveModuleDisplayName($module, $modulePath);
+        $moduleCode = strtoupper(pathinfo($modulePath, PATHINFO_FILENAME));
+
+        return [
+            'parent' => $id,
+            'children' => true,
+            'data' => $path,
+            'id' => $id . '#' . preg_replace('/[^a-zA-Z0-9]+/', '', $moduleCode),
+            'ext' => 'tab',
+            'text' => $displayName ?: $moduleCode,
+            'mod' => ((is_file($modulePath)) ? $modulePath : Config::publicDir() . DIRECTORY_SEPARATOR . $modulePath),
+            'type' => 'mod',
+        ];
+    }
+
+    private static function getModuleJsonPath(string $modulePath): ?string
+    {
+        $jsonPath = preg_replace('/\.xsd$/', '.json', $modulePath);
+
+        if (!is_string($jsonPath) || $jsonPath === $modulePath) {
+            return null;
+        }
+
+        return $jsonPath;
+    }
+
+    private static function resolveRelativeFile(string $baseDirectory, string $relativePath): ?string
+    {
+        if (preg_match('/^https?:\/\//i', $relativePath)) {
+            return null;
+        }
+
+        $resolved = realpath($baseDirectory . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath));
+
+        return $resolved === false ? null : $resolved;
+    }
+
+    private function resolveLocatorLabelContent(array $taxonomy, string $from, ?string $href = null): ?string
+    {
+        $languageKey = Library\Data::checkLang($taxonomy);
+
+        if (empty($languageKey) || empty($taxonomy[$languageKey]) || !is_array($taxonomy[$languageKey])) {
+            return $href !== null ? self::normalizeDisplayTitle(Format::getAfterSpecChar($href, '#')) : null;
+        }
+
+        $entries = DomToArray::search_multdim($taxonomy[$languageKey], 'from', $from) ?? [];
+
+        foreach (self::preferredLabelRoles() as $role) {
+            foreach ($entries as $entry) {
+                if (($entry['role'] ?? null) !== $role) {
+                    continue;
+                }
+
+                $content = self::normalizeDisplayTitle($entry['@content'] ?? null);
+
+                if (!empty($content) && !in_array($content, ['Rows', 'Columns'], true)) {
+                    return $content;
+                }
+            }
+        }
+
+        foreach ($entries as $entry) {
+            $content = self::normalizeDisplayTitle($entry['@content'] ?? null);
+
+            if (!empty($content) && !in_array($content, ['Rows', 'Columns'], true)) {
+                return $content;
+            }
+        }
+
+        return $href !== null ? self::normalizeDisplayTitle(Format::getAfterSpecChar($href, '#')) : null;
+    }
+
+    private function resolveModuleDisplayName(array $taxonomy, string $modulePath): ?string
+    {
+        $languageKey = Library\Data::checkLang($taxonomy);
+
+        if (empty($languageKey) || empty($taxonomy[$languageKey]) || !is_array($taxonomy[$languageKey])) {
+            return strtoupper(pathinfo($modulePath, PATHINFO_FILENAME));
+        }
+
+        $moduleFile = basename($modulePath);
+
+        foreach (self::preferredLabelRoles() as $role) {
+            foreach ($taxonomy[$languageKey] as $entry) {
+                if (($entry['role'] ?? null) !== $role) {
+                    continue;
+                }
+
+                if (strpos((string) ($entry['href'] ?? ''), $moduleFile . '#') === false) {
+                    continue;
+                }
+
+                $content = self::normalizeDisplayTitle($entry['@content'] ?? null);
+
+                if (!empty($content)) {
+                    return $content;
+                }
+            }
+        }
+
+        return strtoupper(pathinfo($modulePath, PATHINFO_FILENAME));
+    }
+
+    public static function getTableDisplayName(string $tableXsdPath): ?string
+    {
+        try {
+            $taxonomy = Data::getTax($tableXsdPath, Data::getLangSpec('mod'));
+        } catch (\Throwable $exception) {
+            return strtoupper(pathinfo($tableXsdPath, PATHINFO_FILENAME));
+        }
+
+        $languageKey = Library\Data::checkLang($taxonomy);
+
+        if (empty($languageKey) || empty($taxonomy[$languageKey]) || !is_array($taxonomy[$languageKey])) {
+            return strtoupper(pathinfo($tableXsdPath, PATHINFO_FILENAME));
+        }
+
+        $tableCode = pathinfo($tableXsdPath, PATHINFO_FILENAME);
+
+        foreach (self::preferredLabelRoles() as $role) {
+            foreach ($taxonomy[$languageKey] as $entry) {
+                if (($entry['role'] ?? null) !== $role) {
+                    continue;
+                }
+
+                if (strpos((string) ($entry['href'] ?? ''), $tableCode . '-rend.xml#') === false) {
+                    continue;
+                }
+
+                $content = self::normalizeDisplayTitle($entry['@content'] ?? null);
+
+                if (!empty($content) && !in_array($content, ['Rows', 'Columns'], true)) {
+                    return strtoupper($tableCode) . ' - ' . $content;
+                }
+            }
+        }
+
+        return strtoupper($tableCode);
+    }
+
+    private static function preferredLabelRoles(): array
+    {
+        return [
+            'http://www.xbrl.org/2008/role/verboseLabel',
+            'http://www.xbrl.org/2003/role/verboseLabel',
+            'http://www.xbrl.org/2008/role/label',
+            'http://www.xbrl.org/2003/role/label',
+        ];
+    }
+
+    private static function normalizeDisplayTitle($label): ?string
+    {
+        if (!is_string($label)) {
+            return null;
+        }
+
+        $label = trim(preg_replace('/\s+/', ' ', $label));
+
+        if ($label === '') {
+            return null;
+        }
+
+        return preg_replace('/^[A-Z]_[0-9]{2}\.[0-9]{2}(?:\.[A-Za-z0-9]+)?\s*:\s*/', '', $label) ?: $label;
     }
 
     /**
