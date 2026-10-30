@@ -415,6 +415,11 @@ class RenderHtmlTable
 
                                 endif;
                             endforeach;
+
+                            // DPM 2.0: render the typed (open) axis by the typed domain's
+                            // actual data type (date / integer / decimal / boolean) instead
+                            // of a bare text box. Resolved from the dimension's typedDomainRef.
+                            $additional['typedBase'] = $this->resolveTypedBase($yN['dimensionAspect'] ?? null, $defArr ?? null);
                         endif;
 
                     else:
@@ -644,6 +649,20 @@ class RenderHtmlTable
         if (isset($def['type_metric'])):
             $value = $this->getValue($name, $def['type_metric'], $dim);
 
+            // Extensible Enumerations 2.0: a fact whose value is a *set* of members
+            // (space-separated QNames) → multi-select. (Not used by EBA 4.x yet.)
+            if (str_contains((string)$def['type_metric'], 'enumerationSetItemType') && isset($def['presentation'])):
+                $selectedSet = preg_split('/\s+/', trim((string)$value)) ?: [];
+                $input .= "<select multiple class='xbrl-select xbrl-select-multi' id='$name' name='" . $name . "[value][]'>";
+                foreach ($def['presentation'] as $row):
+                    $opt = $this->getHierKey($def['namespace'], $row['href']);
+                    $input .= "<option " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $row['@content'] . "</option>";
+                endforeach;
+                $input .= "</select>";
+
+                return $input;
+            endif;
+
             switch ($def['type_metric']):
 
                 case 'xbrli:monetaryItemType':
@@ -730,7 +749,24 @@ class RenderHtmlTable
             else:
 
                 $value = $this->getValue($name, 'open', $dim);
-                $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]'  value='$value' class='xbrl-input-open' />";
+                $ro = (isset($readonly)) ? $readonly : "";
+                // DPM 2.0: typed (open) axis renders by its typed-domain base type.
+                switch ($additional['typedBase'] ?? null):
+                    case 'date':
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='text' value='$value' class='xbrl-input xbrl-input-open datepicker' />";
+                        break;
+                    case 'integer':
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='number' step='1' value='$value' class='xbrl-input xbrl-input-open' />";
+                        break;
+                    case 'decimal':
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='number' step='any' value='$value' class='xbrl-input xbrl-input-open' />";
+                        break;
+                    case 'boolean':
+                        $input .= "<select class='xbrl-select xbrl-input-open' id='$name' name='" . $name . "[value]'><option></option><option " . (('true' === $value) ? "selected='selected'" : "") . " value='true'>Yes</option><option " . (('false' === $value) ? "selected='selected'" : "") . " value='false'>No</option></select>";
+                        break;
+                    default:
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' value='$value' class='xbrl-input-open' />";
+                endswitch;
 
             endif;
             return $input;
@@ -739,6 +775,102 @@ class RenderHtmlTable
             $input .= "<input  disabled name='$name' type='text' class='xbrl-input' />";
             return $input;
         endif;
+    }
+
+    /**
+     * Resolve the base data type of a typed (open-axis) dimension — date / integer /
+     * decimal / boolean / string — from its typedDomainRef, so the cell can render
+     * the right control instead of a bare text box.
+     */
+    private function resolveTypedBase($dimensionAspect, $def = null)
+    {
+        static $cache = [];
+
+        $ref = (is_array($def) && !empty($def['typedDomainRef'])) ? $def['typedDomainRef'] : null;
+
+        if (!$ref && $dimensionAspect) {
+            $idtyp = Format::getAfterSpecChar($dimensionAspect, ':');
+            foreach ((array)($this->roleType ?? []) as $row) {
+                $d = DomToArray::search_multdim($this->specification['def'][$row] ?? [], 'name', $idtyp);
+                if (is_array($d)) {
+                    $d = end($d);
+                    if (!empty($d['typedDomainRef'])) { $ref = $d['typedDomainRef']; break; }
+                }
+            }
+        }
+
+        if (!$ref) {
+            return null;
+        }
+        if (array_key_exists($ref, $cache)) {
+            return $cache[$ref];
+        }
+
+        return $cache[$ref] = $this->resolveTypedDomainRef($ref);
+    }
+
+    /** Read the typed-domain XSD element (file#id) and map its XSD type to a base kind. */
+    private function resolveTypedDomainRef($ref)
+    {
+        static $docs = [];
+
+        [$file, $frag] = array_pad(explode('#', (string)$ref, 2), 2, '');
+        if ($frag === '') {
+            return null;
+        }
+
+        $uri = $this->specification['tab_xsd_uri'] ?? '';
+        $pos = strpos($uri, '/crr/');
+        $base = ($pos !== false) ? substr($uri, 0, $pos + 5) : rtrim(dirname($uri), '/') . '/';
+        $path = $base . 'dict/dom/' . basename($file);
+        if (!is_file($path)) {
+            return null;
+        }
+
+        if (!isset($docs[$path])) {
+            $doc = new \DOMDocument();
+            @$doc->loadXML((string)file_get_contents($path));
+            $docs[$path] = $doc;
+        }
+        $xp = new \DOMXPath($docs[$path]);
+
+        $type = null;
+        foreach ($xp->query("//*[local-name()='element'][@id=" . $this->xpathLiteral($frag) . "]") as $node) {
+            $type = $node->getAttribute('type');
+            break;
+        }
+        if (!$type) {
+            $name = preg_replace('/^eba_/', '', $frag);
+            foreach ($xp->query("//*[local-name()='element'][@name=" . $this->xpathLiteral($name) . "]") as $node) {
+                $type = $node->getAttribute('type');
+                break;
+            }
+        }
+        if (!$type) {
+            return null;
+        }
+
+        $t = strtolower($type);
+        if (str_contains($t, 'date')) return 'date';
+        if (str_contains($t, 'integer') || str_contains($t, 'int_')) return 'integer';
+        if (str_contains($t, 'decimal')) return 'decimal';
+        if (str_contains($t, 'monetary')) return 'integer';
+        if (str_contains($t, 'boolean')) return 'boolean';
+
+        return 'string';
+    }
+
+    /** Quote a string for use as an XPath literal (handles embedded quotes). */
+    private function xpathLiteral($value)
+    {
+        if (!str_contains($value, "'")) {
+            return "'" . $value . "'";
+        }
+        if (!str_contains($value, '"')) {
+            return '"' . $value . '"';
+        }
+
+        return "concat('" . str_replace("'", "',\"'\",'", $value) . "')";
     }
 
     private function buildHiddenDimensionInput($name, $dim, $additional = null)
