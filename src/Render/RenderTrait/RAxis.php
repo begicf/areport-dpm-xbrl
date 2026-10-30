@@ -90,6 +90,12 @@ trait RAxis
     {
         $metricKey = $dom['metric'] ?? null;
 
+        // Only items that actually contain this metric can match — look them up by
+        // the metric index built in checkDef (falls back to the full set if absent).
+        $scanItems = ($metricKey !== null && $this->tmpByMetric !== null)
+            ? ($this->tmpByMetric[$metricKey] ?? [])
+            : $this->tmp;
+
         if (!empty($metricKey)) {
             $requestedMemberKeys = array_values(array_filter(array_keys($dom), static function ($key) {
                 return $key !== 'metric';
@@ -98,7 +104,7 @@ trait RAxis
             $bestMatch = false;
             $bestScore = null;
 
-            foreach ($this->tmp as $item) {
+            foreach ($scanItems as $item) {
                 if (!isset($item[$metricKey])) {
                     continue;
                 }
@@ -126,7 +132,7 @@ trait RAxis
             }
         }
 
-        foreach ($this->tmp as $item) {
+        foreach ($scanItems as $item) {
             if (isset($dom['metric']) && isset($item[$dom['metric']])):
                 $dif = array_diff_key($item, $dom);
 
@@ -620,16 +626,19 @@ trait RAxis
      */
     public function checkDef($dim)
     {
-
-        $this->specification['def'];
-
         $dimA = json_decode($dim, true);
         if (!is_array($dimA)) {
             return false;
         }
 
+        // Memoise by the exact dimensional signature — same cell def resolves to the
+        // same availability, so repeated lookups are free (zero risk to the result).
+        if (array_key_exists($dim, $this->defCache)) {
+            return $this->defCache[$dim];
+        }
+
         if (empty($this->tmp)):
-            foreach ($this->specification['def'] as $key => &$val):
+            foreach ($this->specification['def'] as $key => $val):
 
                 if (count($val) > 2):
                     foreach ($val as $keyVal => $row):
@@ -640,6 +649,18 @@ trait RAxis
             endforeach;
         endif;
 
+        // Index def items by each of their keys so findDefinitionMatch iterates only
+        // the items that contain the requested metric, instead of scanning all of
+        // $tmp per cell. This is the same set the old isset() check kept — just faster.
+        if ($this->tmpByMetric === null):
+            $this->tmpByMetric = [];
+            foreach ($this->tmp as $item):
+                foreach (array_keys($item) as $k):
+                    $this->tmpByMetric[$k][] = $item;
+                endforeach;
+            endforeach;
+        endif;
+
         $candidates = [$dimA];
         $reduced = $this->stripDefaultDimensions($dimA);
 
@@ -647,19 +668,22 @@ trait RAxis
             $candidates[] = $reduced;
         }
 
+        $result = false;
         foreach ($candidates as $candidate) {
             $legacy = $this->findDefinitionMatch($this->buildLegacyDefinitionMap($candidate));
             if ($legacy !== false) {
-                return $legacy;
+                $result = $legacy;
+                break;
             }
 
             $normalized = $this->findDefinitionMatch($this->buildNormalizedDefinitionMap($candidate));
             if ($normalized !== false) {
-                return $normalized;
+                $result = $normalized;
+                break;
             }
         }
 
-        return false;
+        return $this->defCache[$dim] = $result;
     }
 
     /**
