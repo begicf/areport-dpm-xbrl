@@ -489,6 +489,7 @@ class RenderHtmlTable
                         $body->setCellContents($y, $colspanMax + $x, $input);
                         $body->setCellAttributes($y, $colspanMax + $x, array(
                             'class' => 'xbrl-td',
+                            'rc-code' => $name,
                             //'dimension' => $dim,
                         ));
 
