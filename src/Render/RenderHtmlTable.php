@@ -40,6 +40,11 @@ class RenderHtmlTable
     private $sheet;
 
     private $roleType = [];
+
+    /** Definition-linkbase lookup caches (built once per render) — see checkDef(). */
+    private $tmp = [];
+    private $tmpByMetric = null;
+    private $defCache = [];
     private $tableJsonMetadata;
 
     private function setImport($import)
