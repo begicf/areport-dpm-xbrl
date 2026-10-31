@@ -248,7 +248,7 @@ trait RAxis
         return $root . '_' . $domain . ':' . $root . '_' . $local;
     }
 
-    public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array())
+    public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array(), $inheritedConcept = 'false')
     {
         $branch = array();
 
@@ -264,7 +264,9 @@ trait RAxis
                         array_replace($node, $this->specification['rend']['ruleNode'][$element['from']]['dimension']);
                 endif;
 
-                $children = $this->buildXAxis($elements, $element['to'], $n + 1, $node);
+                $ownConcept = $this->specification['rend']['ruleNode'][$element['to']]['concept'] ?? 'false';
+                // An ancestor's concept applies to its descendants (XBRL Table aspect rules).
+                $children = $this->buildXAxis($elements, $element['to'], $n + 1, $node, $ownConcept !== 'false' ? $ownConcept : $inheritedConcept);
                 if ($children):
 
                     $element['row'] = $n++;
@@ -281,6 +283,9 @@ trait RAxis
 
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
                     $element['childOrder'] = $this->specification['rend']['ruleNode'][$element['to']]['parentChildOrder'] ?? 'parent-first';
 
 
@@ -348,6 +353,9 @@ trait RAxis
                         $element['dimension'] = $node;
                     endif;
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
 
                     $element['row'] = $n;
 
@@ -358,7 +366,7 @@ trait RAxis
         return $branch;
     }
 
-    public function buildYAxis(array $elements, $parentId = 0, $n = 0, $node = array())
+    public function buildYAxis(array $elements, $parentId = 0, $n = 0, $node = array(), $inheritedConcept = 'false')
     {
         $branch = array();
 
@@ -372,7 +380,9 @@ trait RAxis
                         array_replace($node, $this->specification['rend']['ruleNode'][$element['from']]['dimension']);
                 endif;
 
-                $children = $this->buildYAxis($elements, $element['to'], $n + 1, $node);
+                $ownConcept = $this->specification['rend']['ruleNode'][$element['to']]['concept'] ?? 'false';
+                // An ancestor's concept applies to its descendants (XBRL Table aspect rules).
+                $children = $this->buildYAxis($elements, $element['to'], $n + 1, $node, $ownConcept !== 'false' ? $ownConcept : $inheritedConcept);
 
                 if ($children):
                     $element['col'] = $n++;
@@ -388,6 +398,9 @@ trait RAxis
                     endif;
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
 
                     // children-first (a total after its breakdown): the parent's own row
                     // follows its children; an abstract header stays on top.
@@ -423,6 +436,9 @@ trait RAxis
 
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
                     $element['col'] = $n;
 
                     $branch[] = $element;
@@ -679,7 +695,9 @@ trait RAxis
 
                 // A hypercube is metric + hyp (+ its dimensions); one without dimensions
                 // still admits the metric's dimensionless cells.
-                if (count($val) > 2 || (count($val) === 2 && isset($val['hyp']))):
+                // (metric + one typed dimension is also two items: "hyp:<typed dim>")
+                $hasHyp = isset($val['hyp']) || (bool) preg_grep('/^hyp(:|$)/', array_map('strval', array_keys($val)));
+                if (count($val) > 2 || (count($val) === 2 && $hasHyp)):
                     foreach ($val as $keyVal => $row):
                         $this->tmp[$key][$keyVal] = $row;
                     endforeach;
@@ -785,6 +803,10 @@ trait RAxis
             $metric = ['metric' => $y['metric']];
         elseif (isset($z['metric']) && $z['metric'] != 'false'):
             $metric = ['metric' => $z['metric']];
+        elseif (!empty($x['inheritedMetric'])):
+            $metric = ['metric' => $x['inheritedMetric']];
+        elseif (!empty($y['inheritedMetric'])):
+            $metric = ['metric' => $y['inheritedMetric']];
         endif;
 
 
