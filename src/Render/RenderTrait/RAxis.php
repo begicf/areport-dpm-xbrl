@@ -281,6 +281,7 @@ trait RAxis
 
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    $element['childOrder'] = $this->specification['rend']['ruleNode'][$element['to']]['parentChildOrder'] ?? 'parent-first';
 
 
                     $count_leaves = count(array_column($children, 'leaves_element'));
@@ -388,14 +389,24 @@ trait RAxis
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
 
+                    // children-first (a total after its breakdown): the parent's own row
+                    // follows its children; an abstract header stays on top.
+                    $childrenFirst = ($this->specification['rend']['ruleNode'][$element['to']]['parentChildOrder'] ?? '') === 'children-first'
+                        && ($element['abstract'] ?? 'false') !== 'true';
 
-                    $branch[] = $element;
+                    if (!$childrenFirst):
+                        $branch[] = $element;
+                    endif;
 
                     foreach ($children as $c):
 
                         $branch[] = $c;
 
                     endforeach;
+
+                    if ($childrenFirst):
+                        $branch[] = $element;
+                    endif;
                     $n--;
 
                 else:
