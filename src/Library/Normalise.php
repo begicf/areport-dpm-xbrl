@@ -7,6 +7,8 @@
  */
 
 namespace AReportDpmXBRL\Library;
+
+use AReportDpmXBRL\Config\Config;
 /**
  * Class Normalise
  * @category
@@ -27,6 +29,27 @@ class Normalise
         else:
             return self::_normalise($path);
         endif;
+    }
+
+    /**
+     * The local file a locator href points to. A relative href resolves against the
+     * linkbase's directory; an absolute one (http://www.eba.europa.eu/…, as an
+     * extension taxonomy references another owner's dictionary) maps to that host's
+     * folder in the same taxonomy root: <public>/<root>/<host>/<path>.
+     */
+    public static function resolveHref(string $basePath, string $href): string
+    {
+        $file = strtok($href, '#');
+        if (preg_match('#^https?://([^/]+)/(.*)$#i', (string) $file, $m)) {
+            $public = rtrim(Config::publicDir(), '/\\') . DIRECTORY_SEPARATOR;
+            if (strpos($basePath, $public) === 0) {
+                $root = strtok(substr($basePath, strlen($public)), '/\\');
+
+                return $public . $root . DIRECTORY_SEPARATOR . $m[1] . DIRECTORY_SEPARATOR . $m[2];
+            }
+        }
+
+        return dirname($basePath) . DIRECTORY_SEPARATOR . $file;
     }
 
     public static function _normalise($path)
