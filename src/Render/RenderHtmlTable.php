@@ -525,6 +525,12 @@ class RenderHtmlTable
 
 
 
+    /** An option's text indented by its depth in the hierarchy (tree, not a flat list). */
+    private function indentedOption(array $row): string
+    {
+        return str_repeat('&nbsp;&nbsp;&nbsp;', (int) ($row['level'] ?? 0)) . ($row['@content'] ?? '');
+    }
+
     private function showSheets($ZAxis, $ZSelect)
     {
         $ZSelect=json_decode($ZSelect,true);
@@ -587,7 +593,7 @@ class RenderHtmlTable
                 isset($this->sheet[$keyID]) && $this->sheet[$keyID] == 'found' ? "data-icon='fa-table'" : "";
             $selected = isset($this->sheet[$keyID]) && $this->sheet[$keyID] == 'active' ? 'selected' : '';
 
-            $html .= "<option $exist $selected id=" . $keyID . " data-id='$keyID' value='" . json_encode(array_merge($key, ['sheet' => $keyID])) . "' >" . $sheet['@content'] . "</option>";
+            $html .= "<option $exist $selected id=" . $keyID . " data-id='$keyID' value='" . json_encode(array_merge($key, ['sheet' => $keyID])) . "' >" . $this->indentedOption($sheet) . "</option>";
 
             $shee++;
         endforeach;
@@ -662,7 +668,7 @@ class RenderHtmlTable
                 $input .= "<select multiple class='xbrl-select xbrl-select-multi' id='$name' name='" . $name . "[value][]'>";
                 foreach ($def['presentation'] as $row):
                     $opt = $this->getHierKey($def['namespace'], $row['href']);
-                    $input .= "<option " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $row['@content'] . "</option>";
+                    $input .= "<option " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $this->indentedOption($row) . "</option>";
                 endforeach;
                 $input .= "</select>";
 
@@ -682,7 +688,7 @@ class RenderHtmlTable
                         $input .= "<option value=''></option>";
                         foreach ($def['presentation'] as $row):
 
-                            $input .= "<option " . (($this->getHierKey($def['namespace'], $row['href']) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row['href']) . "'>" . $row['@content'] . "</option>";
+                            $input .= "<option " . (($this->getHierKey($def['namespace'], $row['href']) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row['href']) . "'>" . $this->indentedOption($row) . "</option>";
                         endforeach;
                         $input .= "</select>";
                     endif;
@@ -746,7 +752,7 @@ class RenderHtmlTable
 
                         $selected = $value == json_encode($key) ? 'selected' : '';
 
-                        $input .= "<option $selected value='" . json_encode($key) . "'>" . $row['@content'] . "</option>";
+                        $input .= "<option $selected value='" . json_encode($key) . "'>" . $this->indentedOption($row) . "</option>";
 
                     endif;
                 endforeach;
