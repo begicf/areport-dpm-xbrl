@@ -4,7 +4,7 @@ name: Deploy to demo.areport.net
 # AReport repository from GitHub, installs, migrates and reloads (areport-deploy).
 on:
   push:
-    branches: [publish]
+    branches: [master]
   workflow_dispatch:
 
 concurrency:
