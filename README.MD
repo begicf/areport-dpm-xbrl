@@ -1,75 +1,103 @@
 # AreportDpmXBRL
 
-`AreportDpmXBRL` is a PHP library for parsing DPM/XBRL taxonomies, rendering taxonomy tables, and preparing export payloads for the AReport application.
+`AreportDpmXBRL` is a PHP library that reads DPM/XBRL supervisory reporting taxonomies (EBA, ECB, national extensions), renders their tables as HTML forms, and writes `xBRL-CSV` and `xBRL-XML` instances that follow the EBA filing rules.
 
-The library is used by the AReport web application, but it is kept as a separate package so the parsing and rendering logic can evolve independently.
+It powers the [AReport](https://github.com/begicf/areport) web application. It lives in its own package so the taxonomy logic can be developed and tested independently.
 
-## Scope
+## What it covers
 
-The package currently covers:
+### Taxonomy reading
+- **Entry points and table linkbases:** module entry points (`mod/*.xsd`) and table linkbases (`tab/*`) of DPM `1.0` and DPM `2.0` taxonomies, tested with EBA 4.2 and 4.4.
+- **Module tree:** frameworks, taxonomy versions, modules, table groups and tables (`ModuleTree`). It includes a module that imports another owner's table by its official URL.
+- **Paths and hrefs:** paths resolve across taxonomy revisions, and absolute locator hrefs resolve to the local taxonomy root.
+- **Labels:** labels in several languages, preferring business labels over generic `Rows` / `Columns` placeholders.
+- **Metadata and LEI:** DPM metadata from the table JSON sidecars of xBRL-CSV taxonomies (`TableJsonMetadata`), module version info (`ModuleInfo`, including the DPM 2.0 ModuleVID), and LEI check digits per ISO 17442 (`Lei::isValid`).
 
-- taxonomy parsing
-- module and table discovery
-- HTML table rendering
-- spreadsheet, HTML, and PDF rendering helpers
-- export preparation for xBRL XML and xBRL CSV
+### Table rendering
+- **Axes and ordering:** x/y/z axes with nested breakdowns. `parentChildOrder="children-first"` is honoured on both axes, rollup parents included. Sub-columns inherit their ancestors' concept, and a data column that has sub-columns keeps its own column.
+- **Enabled and disabled cells:** decided by the definition linkbase (hypercubes, exact member sets). This also covers owner taxonomies, empty hypercubes, cubes of a metric plus one typed dimension, and open-axis keys without member constraints.
+- **Open tables and typed z-axes:**
+  - Open tables add rows with their key columns.
+  - Typed z-axes become sheets named by their key value (`k:<value>`).
+  - On explicit z-axes, each sheet's member QName is written in its member's domain namespace (e.g. `eba_CU:AED`).
+- **Enumerations:** dropdowns that follow the hierarchy as a tree (indented options, no lost members), including members of other domains and other owners.
+- **Other output formats:** HTML, `.xlsx` (PhpSpreadsheet) and `.pdf` (mPDF) through `Render::export()`.
 
-## Recent Changes
+### Instance writers
+- `CreateXBRLCsvPackage` writes an `xBRL-CSV` report package (ZIP):
+  - one datapoint per cell, matched on its exact dimensions;
+  - a datapoint shared by two tables is reported once;
+  - open-table rows carry their keys, and typed members are written flat;
+  - EBA package name, parameters and filing indicators for every template of the module.
+- `CreateXBRLFromDB` writes an `xBRL-XML` instance:
+  - one context per member set, and one fact per concept and context;
+  - `link` and `xlink` are always declared;
+  - filing indicators use a qualified `find:filed`.
+- Both writers take filing options through `setOptions()`: base currency, monetary scale, decimals per data type, base language, NCA country, and filing-indicator overrides.
 
-The current development version includes the following important fixes and improvements:
-
-- restored legacy hierarchy and domain rendering for DPM `1.0` taxonomies
-- improved taxonomy path resolution across multiple DPM taxonomy revisions
-- improved module and table handling for taxonomies that do not expose the exact same `mod` structure
-- improved label resolution so business labels are preferred over generic `Rows` / `Columns` placeholders
-- added compatibility fixes for DPM `2.0` table definitions and open-table patterns
-- improved definition matching so valid cells are no longer incorrectly rendered as disabled
-- restored dropdown domain rendering for hierarchy-driven cells
-- improved handling of DPM metadata captured from table JSON sidecars
-- improved xBRL XML generation, including scenario members and filing indicator normalization
-- added an xBRL-CSV package writer aligned with local EBA sample package structure
-- fixed PhpSpreadsheet compatibility for explicit string cell writes
+On the 10 EBA 4.2 sample modules that were tested (FP, AE, COREP LR, GSII, IPU, IRRBB, MREL TLAC, PSD FRP, REM BMCI, MICA OF), the instances written from form data match the official sample instances fact for fact. Arelle reports the same results for both.
 
 ## Installation
-
-Install the package with Composer:
 
 ```bash
 composer require begicf/areport-dpm-xbrl
 ```
 
-## Quick Start
+For development next to AReport, clone it as a sibling folder (`../areport-dpm-xbrl`). AReport's `composer.json` links it as a symlinked path repository.
+
+## Usage
+
+### Render a table as an HTML form
 
 ```php
-<?php
-
 use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Render;
 
-$taxonomy = Data::getTax($tablePath);
+$taxonomy = Data::getTax($tablePath);          // a table linkbase of the taxonomy
 $render = new Render($taxonomy);
-$htmlForm = $render->renderHtmlForm();
+
+$form = $render->renderHtmlForm([
+    'sheets' => '000',                         // selected z-axis sheet
+    'file'   => $storedFacts,                  // facts to show in the cells
+    'ext'    => 'DB',                          // source of the data: DB or XBRL
+], $selectedSheet);
+
+// $form: table, sheets, tableName, aspectNode, tableID, groups
 ```
 
-The HTML renderer returns an array with keys such as:
+### Export a rendered table
 
-- `table`
-- `sheets`
-- `tableName`
-- `aspectNode`
-- `tableID`
-- `groups`
+```php
+$output = $render->export('xlsx');             // html | xlsx | pdf
+```
 
-## Development Notes
+### Write an xBRL-CSV report package
 
-The package is currently being maintained with two goals in parallel:
+```php
+use AReportDpmXBRL\Creat\CreateXBRLCsvPackage;
 
-1. preserve the existing DPM `1.0` behavior
-2. improve compatibility with DPM `2.0` taxonomy structures
+$package = (new CreateXBRLCsvPackage($period, $entityId, $modulePath, $facts, $taxonomyFolder))
+    ->setOptions(['baseCurrency' => 'EUR', 'country' => 'BA'])
+    ->writePackage();                          // ['path' => zip file, 'filename' => EBA package name]
+```
 
-Because of that, changes should be reviewed carefully against both old and new taxonomy packages.
+### Write an xBRL-XML instance
 
-## Related Repository
+```php
+use AReportDpmXBRL\Creat\CreateXBRLFromDB;
+
+$xml = (new CreateXBRLFromDB($period, $entityId, $modulePath, $facts, $filedTables, $taxonomyFolder))
+    ->setOptions(['baseCurrency' => 'EUR'])
+    ->writeXbrl();
+```
+
+## Development notes
+
+- Keep DPM `1.0` behaviour stable while extending DPM `2.0` support, and check changes against old and new taxonomy packages.
+- AReport keeps a render baseline of 10 EBA tables. A rendering change should leave it unchanged unless the change is intended.
+- Work on `master`. A push deploys the AReport demo (<https://demo.areport.net>) with the latest library.
+
+## Related repositories
 
 - AReport application: <https://github.com/begicf/areport>
 - Package repository: <https://github.com/begicf/areport-dpm-xbrl>
