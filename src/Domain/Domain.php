@@ -172,6 +172,7 @@ class Domain
                 'to' => $row['to'] ?? null,
                 'order' => $row['order'] ?? null,
                 'arcrole' => $row['arcrole'] ?? null,
+                'usable' => $row['usable'] ?? null,
             ]);
         }
 

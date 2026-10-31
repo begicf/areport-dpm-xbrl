@@ -117,6 +117,12 @@ trait RAxis
                     continue;
                 }
 
+                // A closed hypercube admits no cell lacking one of its explicit dimensions
+                // (one listing members): a cell without that dimension is not in it.
+                if (array_diff($this->explicitDefinitionDimensions($item), array_values(array_diff_key($dom, ['metric' => 1])))) {
+                    continue;
+                }
+
                 $itemMemberKeys = $this->extractDefinitionMemberKeys($item);
                 $extraMemberCount = count(array_diff($itemMemberKeys, $requestedMemberKeys));
                 $score = [$extraMemberCount, count($itemMemberKeys)];
@@ -136,13 +142,27 @@ trait RAxis
             if (isset($dom['metric']) && isset($item[$dom['metric']])):
                 $dif = array_diff_key($item, $dom);
 
-                if (count($dif) == (count($item) - count($dom) + 1)):
+                if (count($dif) == (count($item) - count($dom) + 1)
+                    && !array_diff($this->explicitDefinitionDimensions($item), array_values(array_diff_key($dom, ['metric' => 1])))):
                     return $item[$dom['metric']];
                 endif;
             endif;
         }
 
         return false;
+    }
+
+    /** Explicit dimensions of a definition item: those with member keys ("dim:domain:member"). */
+    private function explicitDefinitionDimensions(array $item): array
+    {
+        $dims = [];
+        foreach (array_keys($item) as $key) {
+            if (substr_count((string) $key, ':') >= 2) {
+                $dims[strtok((string) $key, ':')] = true;
+            }
+        }
+
+        return array_keys($dims);
     }
 
     private function extractDefinitionMemberKeys(array $item): array
@@ -216,7 +236,8 @@ trait RAxis
         }
 
         [$prefix, $local] = explode(':', $value, 2);
-        $parts = explode('_', $prefix);
+        // "eba_qOR" → eba / qOR; an owner's domain code may itself contain "_" ("fba_FBA_RS").
+        $parts = explode('_', $prefix, 2);
         $root = $parts[0] ?? null;
         $domain = $parts[1] ?? null;
 
@@ -640,7 +661,9 @@ trait RAxis
         if (empty($this->tmp)):
             foreach ($this->specification['def'] as $key => $val):
 
-                if (count($val) > 2):
+                // A hypercube is metric + hyp (+ its dimensions); one without dimensions
+                // still admits the metric's dimensionless cells.
+                if (count($val) > 2 || (count($val) === 2 && isset($val['hyp']))):
                     foreach ($val as $keyVal => $row):
                         $this->tmp[$key][$keyVal] = $row;
                     endforeach;
