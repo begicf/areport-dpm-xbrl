@@ -54,7 +54,7 @@ class CreateXBRLFromDB extends XMLWriter
         'decimalsPercentage' => 4,
         'decimalsInteger' => 0,
         'decimalsDecimal' => 2,
-        'filingIndicators' => [],    // code => bool; false is written as filed="false"
+        'filingIndicators' => [],    // code => bool; false is written as find:filed="false"
     ];
 
     /**
@@ -492,13 +492,13 @@ class CreateXBRLFromDB extends XMLWriter
         endforeach;
 
         // Filing Rules: every template of the module carries an indicator — negative
-        // (filed="false") unless it is reported. Needs the module JSON (DPM 2.0 modules).
+        // (find:filed="false") unless it is reported. Needs the module JSON (DPM 2.0 modules).
         $info = ModuleInfo::load((string) $this->moduleDir, (string) $this->schemaRef);
         foreach (array_keys($info['filing_indicators'] ?? []) as $code):
             $fillingIndicator += [$code => false];
         endforeach;
 
-        // Explicit choices win: false is written as filed="false", true is reported even without data.
+        // Explicit choices win: false is written as find:filed="false", true is reported even without data.
         foreach ((array) $this->options['filingIndicators'] as $code => $filed):
             $fillingIndicator[str_replace('-', '.', strtoupper((string) $code))] = (bool) $filed;
         endforeach;
@@ -509,7 +509,8 @@ class CreateXBRLFromDB extends XMLWriter
 
             $this->startElementNS('find', 'filingIndicator', NULL);
             if ($row === false):
-                $this->writeAttribute('filed', 'false');
+                // A global attribute of the filing-indicators schema: it must be qualified.
+                $this->writeAttribute('find:filed', 'false');
             endif;
             $this->writeAttribute('contextRef', 'cfi');
             $this->writeRaw($key);
