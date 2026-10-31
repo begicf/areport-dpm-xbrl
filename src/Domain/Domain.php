@@ -94,6 +94,7 @@ class Domain
 
             if (strpos($row, 'hier.xsd') !== false) {
                 $artifacts['hier'] = Data::getTax($row);
+                $artifacts['hier']['__file'] = $row;   // to resolve relative member hrefs
             } elseif (strpos($row, 'mem.xsd') !== false) {
                 $artifacts['mem'] = self::mem($row);
             }
@@ -241,7 +242,8 @@ class Domain
             if (!empty($presentation)) {
                 return [
                     'presentation' => $presentation,
-                    'namespace' => $mem['namespace'] ?? [],
+                    // members of other domains keep their own prefixes for the values
+                    'namespace' => array_merge((array) ($mem['namespace'] ?? []), self::$foreignNamespaces),
                     'imports' => $mem['imports'] ?? [],
                 ];
             }
@@ -344,7 +346,7 @@ class Domain
         self::$foreignNamespaces = [];
         foreach ($rows as $hier):
             $search = self::findMemberLabel($mem[$lang], $hier)
-                ?? self::foreignMemberLabel((string) ($hier['href'] ?? ''), $lang);
+                ?? self::foreignMemberLabel((string) ($hier['href'] ?? ''), $lang, $hierDef['__file'] ?? null);
             if (!empty($search)):
                 $pre['_' . (++$i)] = array_merge($hier, $search, ['level' => $hier['level'], 'tree_order' => $i]);
             endif;
@@ -364,20 +366,25 @@ class Domain
      * domain points at http://www.eba.europa.eu/…/mem.xsd#eba_x1): read from that
      * member file in the same taxonomy; its namespace is remembered for the values.
      */
-    private static function foreignMemberLabel(string $href, string $lang): ?array
+    private static function foreignMemberLabel(string $href, string $lang, ?string $baseFile = null): ?array
     {
         static $files = [];
-        if (!preg_match('#^https?://([^/]+)/([^\#]+)\#(.+)$#i', $href, $m)) {
-            return null;
-        }
-        $roots = self::$taxonomyRoot ? [Config::publicDir() . self::$taxonomyRoot] : (glob(Config::publicDir() . '*', GLOB_ONLYDIR) ?: []);
         $file = null;
-        foreach ($roots as $root) {
-            $candidate = rtrim($root, '/') . '/' . $m[1] . '/' . $m[2];
-            if (is_file($candidate)) {
-                $file = $candidate;
-                break;
+        if (preg_match('#^https?://([^/]+)/([^\#]+)\#(.+)$#i', $href, $m)) {
+            $roots = self::$taxonomyRoot ? [Config::publicDir() . self::$taxonomyRoot] : (glob(Config::publicDir() . '*', GLOB_ONLYDIR) ?: []);
+            foreach ($roots as $root) {
+                $candidate = rtrim($root, '/') . '/' . $m[1] . '/' . $m[2];
+                if (is_file($candidate)) {
+                    $file = $candidate;
+                    break;
+                }
             }
+        } elseif ($baseFile && preg_match('#^([^\#]+\.xsd)\#(.+)$#i', $href, $rel)) {
+            // A relative href to another domain's members (EBA 4.x hierarchies
+            // combine domains: dom/qtt/4.2/hier → ../../qta/mem.xsd#eba_qx2073).
+            $candidate = realpath(dirname($baseFile) . DIRECTORY_SEPARATOR . $rel[1]);
+            $file = ($candidate && is_file($candidate)) ? $candidate : null;
+            $m = [null, null, null, $rel[2]];
         }
         if (!$file) {
             return null;
@@ -388,8 +395,15 @@ class Domain
             self::$foreignNamespaces[$prefix] = $uri;
         }
         $foreignLang = Data::checkLang($foreign) ?: $lang;
+        static $targets = [];
+        $targets[$file] ??= preg_match('/targetNamespace="([^"]+)"/', (string) file_get_contents($file, false, null, 0, 4000), $tn) ? $tn[1] : null;
+        $prefix = $targets[$file] ? array_search($targets[$file], (array) ($foreign['namespace'] ?? []), true) : false;
         foreach ((array) ($foreign[$foreignLang] ?? []) as $row) {
             if (!empty($row['href']) && Format::getAfterSpecChar($row['href'], '#') === $m[3]) {
+                // The value is a QName in the member's own namespace (eba_qTA:qx2013).
+                if ($prefix && str_contains($m[3], '_')) {
+                    $row['qname'] = $prefix . ':' . substr($m[3], strpos($m[3], '_') + 1);
+                }
                 return $row;
             }
         }

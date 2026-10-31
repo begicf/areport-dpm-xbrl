@@ -753,7 +753,7 @@ class RenderHtmlTable
                 $selectedSet = preg_split('/\s+/', trim((string)$value)) ?: [];
                 $input .= "<select multiple class='xbrl-select xbrl-select-multi' id='$name' name='" . $name . "[value][]'>";
                 foreach ($def['presentation'] as $row):
-                    $opt = $this->getHierKey($def['namespace'], $row['href']);
+                    $opt = $this->getHierKey($def['namespace'], $row);
                     $input .= "<option" . $this->optionState($row) . " " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $this->indentedOption($row) . "</option>";
                 endforeach;
                 $input .= "</select>";
@@ -774,7 +774,7 @@ class RenderHtmlTable
                         $input .= "<option value=''></option>";
                         foreach ($def['presentation'] as $row):
 
-                            $input .= "<option" . $this->optionState($row) . " " . (($this->getHierKey($def['namespace'], $row['href']) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row['href']) . "'>" . $this->indentedOption($row) . "</option>";
+                            $input .= "<option" . $this->optionState($row) . " " . (($this->getHierKey($def['namespace'], $row) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row) . "'>" . $this->indentedOption($row) . "</option>";
                         endforeach;
                         $input .= "</select>";
                     endif;
