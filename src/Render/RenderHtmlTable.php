@@ -934,27 +934,43 @@ class RenderHtmlTable
         $uri = $this->specification['tab_xsd_uri'] ?? '';
         $pos = strpos($uri, '/crr/');
         $base = ($pos !== false) ? substr($uri, 0, $pos + 5) : rtrim(dirname($uri), '/') . '/';
-        $path = $base . 'dict/dom/' . basename($file);
-        if (!is_file($path)) {
-            return null;
-        }
+        // The taxonomy root holds one folder per host (…/www.eba.europa.eu, …/www.fba.ba).
+        $root = preg_match('#^(.*?)/[a-z0-9-]+(?:\.[a-z0-9-]+)+/eu/fr/xbrl/#i', $uri, $rm) ? $rm[1] : null;
 
-        if (!isset($docs[$path])) {
-            $doc = new \DOMDocument();
-            @$doc->loadXML((string)file_get_contents($path));
-            $docs[$path] = $doc;
+        // Where the typed domain may live: its official URL under the taxonomy root, the
+        // table owner's dictionary, then EBA's (an owner's table using an EBA typed domain).
+        $candidates = [];
+        if ($root && preg_match('#^https?://(.+)$#i', $file, $um)) {
+            $candidates[] = $root . '/' . $um[1];
         }
-        $xp = new \DOMXPath($docs[$path]);
+        $candidates[] = $base . 'dict/dom/' . basename($file);
+        if ($root) {
+            $candidates[] = $root . '/www.eba.europa.eu/eu/fr/xbrl/crr/dict/dom/' . basename($file);
+        }
 
         $type = null;
-        foreach ($xp->query("//*[local-name()='element'][@id=" . $this->xpathLiteral($frag) . "]") as $node) {
-            $type = $node->getAttribute('type');
-            break;
-        }
-        if (!$type) {
-            $name = preg_replace('/^eba_/', '', $frag);
-            foreach ($xp->query("//*[local-name()='element'][@name=" . $this->xpathLiteral($name) . "]") as $node) {
+        foreach (array_unique($candidates) as $path) {
+            if (!is_file($path)) {
+                continue;
+            }
+            if (!isset($docs[$path])) {
+                $doc = new \DOMDocument();
+                @$doc->loadXML((string)file_get_contents($path));
+                $docs[$path] = $doc;
+            }
+            $xp = new \DOMXPath($docs[$path]);
+            foreach ($xp->query("//*[local-name()='element'][@id=" . $this->xpathLiteral($frag) . "]") as $node) {
                 $type = $node->getAttribute('type');
+                break;
+            }
+            if (!$type) {
+                $name = preg_replace('/^[a-z]+_/', '', $frag);
+                foreach ($xp->query("//*[local-name()='element'][@name=" . $this->xpathLiteral($name) . "]") as $node) {
+                    $type = $node->getAttribute('type');
+                    break;
+                }
+            }
+            if ($type) {
                 break;
             }
         }
