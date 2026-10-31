@@ -165,6 +165,14 @@ class DefinitionLink implements XbrlInterface
 
                 else:
 
+                    // A hypercube without dimensions: the metric's all-arc has no children,
+                    // but the metric must still be recorded (cells with no dimensions).
+                    if (($element['contextElement'] ?? '') == 'scenario' && strpos($loc[$element['from']]['href'] ?? '', 'met.xsd') !== false):
+                        $metric = Metric::getMetric(Normalise::resolveHref($this->path, $loc[$element['from']]['href']),
+                            substr($loc[$element['from']]['href'], strpos($loc[$element['from']]['href'], "#") + 1));
+                        $branch[$loc[$element['from']]['key']] = array_merge($element, $metric, array('href' => $loc[$element['from']]['href']));
+                    endif;
+
                     //if href cointains met.xsd that means that is metric.value
                     if (strpos($loc[$element['to']]['href'], 'met.xsd') !== false):
 

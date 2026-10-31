@@ -531,6 +531,12 @@ class RenderHtmlTable
         return str_repeat('&nbsp;&nbsp;&nbsp;', (int) ($row['level'] ?? 0)) . ($row['@content'] ?? '');
     }
 
+    /** An abstract hierarchy node (usable="false") is shown for structure but cannot be chosen. */
+    private function optionState(array $row): string
+    {
+        return (($row['usable'] ?? '') === 'false') ? " disabled='disabled'" : '';
+    }
+
     private function showSheets($ZAxis, $ZSelect)
     {
         $ZSelect=json_decode($ZSelect,true);
@@ -668,7 +674,7 @@ class RenderHtmlTable
                 $input .= "<select multiple class='xbrl-select xbrl-select-multi' id='$name' name='" . $name . "[value][]'>";
                 foreach ($def['presentation'] as $row):
                     $opt = $this->getHierKey($def['namespace'], $row['href']);
-                    $input .= "<option " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $this->indentedOption($row) . "</option>";
+                    $input .= "<option" . $this->optionState($row) . " " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $this->indentedOption($row) . "</option>";
                 endforeach;
                 $input .= "</select>";
 
@@ -688,7 +694,7 @@ class RenderHtmlTable
                         $input .= "<option value=''></option>";
                         foreach ($def['presentation'] as $row):
 
-                            $input .= "<option " . (($this->getHierKey($def['namespace'], $row['href']) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row['href']) . "'>" . $this->indentedOption($row) . "</option>";
+                            $input .= "<option" . $this->optionState($row) . " " . (($this->getHierKey($def['namespace'], $row['href']) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row['href']) . "'>" . $this->indentedOption($row) . "</option>";
                         endforeach;
                         $input .= "</select>";
                     endif;
@@ -714,6 +720,11 @@ class RenderHtmlTable
                 case 'xbrli:dateItemType':
 
                     $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input datepicker' />";
+                    break;
+                case 'xbrli:integerItemType':
+                case 'xbrli:nonNegativeIntegerItemType':
+
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter a whole number' name='" . $name . "[value]' type='number' step='1' value='$value' class='xbrl-input' />";
                     break;
                 case 'xbrli:decimalItemType':
 
