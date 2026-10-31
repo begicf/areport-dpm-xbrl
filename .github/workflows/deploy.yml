@@ -1,0 +1,33 @@
+name: Deploy to demo.areport.net
+
+# A push to the branch the demo server runs deploys it: the server pulls every
+# AReport repository from GitHub, installs, migrates and reloads (areport-deploy).
+on:
+  push:
+    branches: [publish]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-demo-areport
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Deploy on ordiza.com
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo "::notice::Deploy secrets are not set in this repository yet; skipping the deploy."
+            exit 0
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The key's forced command runs areport-deploy; nothing else is possible.
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes deploy@ordiza.com
