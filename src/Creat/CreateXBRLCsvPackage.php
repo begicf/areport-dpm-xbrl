@@ -3,6 +3,9 @@
 namespace AReportDpmXBRL\Creat;
 
 use AReportDpmXBRL\Config\Config;
+use AReportDpmXBRL\Library\FactValue;
+use AReportDpmXBRL\Library\MetricTypes;
+use AReportDpmXBRL\Library\ModuleInfo;
 use RuntimeException;
 use ZipArchive;
 
@@ -20,6 +23,19 @@ class CreateXBRLCsvPackage
     private $tableMetadataPaths = [];
     private $tableMetadataCache = [];
 
+    /** Filing options; see setOptions(). */
+    private $options = [
+        'baseCurrency' => null,          // ISO 4217, defaults to Config::$monetaryItem
+        'monetaryScale' => 1000,         // form amounts are in thousands
+        'decimalsMonetary' => -3,
+        'decimalsPercentage' => 4,
+        'decimalsInteger' => 0,
+        'decimalsDecimal' => 2,
+        'baseLanguage' => 'en',
+        'country' => null,               // NCA country, for the EBA package name
+        'filingIndicators' => [],        // code => bool, overrides "reported because it has data"
+    ];
+
     public function __construct($period, $entityId, $modulePath, array $facts, $moduleDir = null)
     {
         $this->period = $period;
@@ -27,6 +43,14 @@ class CreateXBRLCsvPackage
         $this->modulePath = $modulePath;
         $this->facts = $facts;
         $this->moduleDir = $moduleDir;
+    }
+
+    /** Override filing options (currency, scale, decimals, country, filing indicators). */
+    public function setOptions(array $options): self
+    {
+        $this->options = array_merge($this->options, array_intersect_key($options, $this->options));
+
+        return $this;
     }
 
     public function writePackage(): array
@@ -165,10 +189,15 @@ class CreateXBRLCsvPackage
                 continue;
             }
 
-            $files[$csvFileName] = $this->renderTableCsv($template, $factsByTable[$tableBaseName]);
+            $filingIndicator = $this->normalizeTemplateId((string) ($table['eba:documentation']['FilingIndicator'] ?? $templateName));
 
-            $filingIndicator = $table['eba:documentation']['FilingIndicator'] ?? $templateName;
-            $filingIndicators[$this->normalizeTemplateId((string) $filingIndicator)] = true;
+            // A template declared "not reported" carries no facts.
+            if (($this->options['filingIndicators'][$filingIndicator] ?? null) === false) {
+                continue;
+            }
+
+            $files[$csvFileName] = $this->renderTableCsv($template, $factsByTable[$tableBaseName]);
+            $filingIndicators[$filingIndicator] = true;
         }
 
         return [
@@ -213,7 +242,7 @@ class CreateXBRLCsvPackage
 
             $row = [
                 'datapoint' => $match['datapoint'],
-                'factValue' => $this->formatFactValue($fact['value']),
+                'factValue' => $this->formatFactValue($fact['value'], $fact['metric'] ?? null, $this->datapointKind($columns, $match['datapoint'])),
                 '__sort_datapoint' => $propertyOrder[$match['datapoint']] ?? PHP_INT_MAX,
             ];
 
@@ -321,7 +350,7 @@ class CreateXBRLCsvPackage
             $groupKey = $this->buildFactGroupKey($fact);
             $row = [
                 'datapoint' => $datapoint,
-                'factValue' => $this->formatFactValue($fact['value']),
+                'factValue' => $this->formatFactValue($fact['value'], $fact['metric'] ?? null, $this->datapointKind($template['columns'] ?? [], $datapoint)),
             ];
 
             foreach ($dynamicColumns as $columnName => $metadata) {
@@ -629,6 +658,20 @@ class CreateXBRLCsvPackage
 
     private function buildFilingIndicatorRows(array $filingIndicators): array
     {
+        // Filing Rules: every template of the module carries an indicator — negative
+        // (false) unless it is reported.
+        foreach ($this->moduleMetadata['tables'] ?? [] as $table) {
+            $code = $table['eba:documentation']['FilingIndicator'] ?? null;
+            if ($code !== null && ! in_array($table['template'] ?? '', ['FilingIndicators', 'FootNotes'], true)) {
+                $filingIndicators += [$this->normalizeTemplateId((string) $code) => false];
+            }
+        }
+
+        // Explicit choices win: false = "not reported", true = reported even without data.
+        foreach ((array) $this->options['filingIndicators'] as $code => $reported) {
+            $filingIndicators[$this->normalizeTemplateId((string) $code)] = (bool) $reported;
+        }
+
         $rows = [];
 
         ksort($filingIndicators);
@@ -789,6 +832,15 @@ class CreateXBRLCsvPackage
 
     private function buildPackageBaseName(): string
     {
+        // EBA naming when the module metadata and the NCA country are known.
+        $info = ModuleInfo::load((string) $this->moduleDir, (string) $this->modulePath);
+        $identifier = strpos($this->entityId, ':') !== false ? substr($this->entityId, strpos($this->entityId, ':') + 1) : $this->entityId;
+        $ebaName = $info ? ModuleInfo::packageName($identifier, (string) $this->options['country'], $info, (string) $this->period) : null;
+
+        if ($ebaName) {
+            return $ebaName;
+        }
+
         $entity = preg_replace('/[^A-Za-z0-9_.-]+/', '-', $this->entityId);
         $module = strtoupper(pathinfo($this->modulePath, PATHINFO_FILENAME));
         $timestamp = date('YmdHis');
@@ -807,7 +859,7 @@ class CreateXBRLCsvPackage
 
     private function buildBaseCurrency(): string
     {
-        return 'iso4217:' . Config::$monetaryItem;
+        return 'iso4217:' . strtoupper((string) ($this->options['baseCurrency'] ?: Config::$monetaryItem));
     }
 
     private function normalizeTemplateId($templateName): string
@@ -868,29 +920,48 @@ class CreateXBRLCsvPackage
             case 'refPeriod':
                 return $this->period;
             case 'baseLanguage':
-                return 'en';
+                return (string) $this->options['baseLanguage'];
             case 'baseCurrency':
                 return $this->buildBaseCurrency();
             case 'decimalsMonetary':
-                return '-3';
+                return (string) $this->options['decimalsMonetary'];
             case 'decimalsPercentage':
-                return '4';
+                return (string) $this->options['decimalsPercentage'];
             case 'decimalsInteger':
-                return '0';
+                return (string) $this->options['decimalsInteger'];
             case 'decimalsDecimal':
-                return '2';
+                return (string) $this->options['decimalsDecimal'];
             default:
                 return null;
         }
     }
 
-    private function formatFactValue($value): string
+    private function formatFactValue($value, ?string $metric = null, ?string $kind = null): string
     {
         if (is_bool($value)) {
             return $value ? 'true' : 'false';
         }
 
-        return (string) $value;
+        $kind = $kind ?? MetricTypes::kind((string) $this->moduleDir, $metric);
+
+        return FactValue::forKind($kind, $value, (int) $this->options['monetaryScale']);
+    }
+
+    /**
+     * A datapoint's value kind from its decimals parameter in the table metadata
+     * ("$decimalsMonetary" -> monetary, ...) - exact for DPM 2.0 tables.
+     */
+    private function datapointKind(array $columns, $datapoint): ?string
+    {
+        $ref = $columns['datapoint']['propertyGroups'][$datapoint]['decimals'] ?? $columns['factValue']['decimals'] ?? null;
+        $kinds = [
+            '$decimalsMonetary' => 'monetary',
+            '$decimalsPercentage' => 'percentage',
+            '$decimalsInteger' => 'integer',
+            '$decimalsDecimal' => 'decimal',
+        ];
+
+        return is_string($ref) ? ($kinds[$ref] ?? null) : null;
     }
 
     private function isDynamicReference($value): bool

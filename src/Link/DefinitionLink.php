@@ -31,6 +31,7 @@ class DefinitionLink implements XbrlInterface
     private $dom;
     private $path;
     public $Xbrl;
+    public $arrayPath;
 
     public function __construct($path)
     {
