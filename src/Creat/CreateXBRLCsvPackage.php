@@ -658,6 +658,15 @@ class CreateXBRLCsvPackage
 
     private function buildFilingIndicatorRows(array $filingIndicators): array
     {
+        // Filing Rules: every template of the module carries an indicator — negative
+        // (false) unless it is reported.
+        foreach ($this->moduleMetadata['tables'] ?? [] as $table) {
+            $code = $table['eba:documentation']['FilingIndicator'] ?? null;
+            if ($code !== null && ! in_array($table['template'] ?? '', ['FilingIndicators', 'FootNotes'], true)) {
+                $filingIndicators += [$this->normalizeTemplateId((string) $code) => false];
+            }
+        }
+
         // Explicit choices win: false = "not reported", true = reported even without data.
         foreach ((array) $this->options['filingIndicators'] as $code => $reported) {
             $filingIndicators[$this->normalizeTemplateId((string) $code)] = (bool) $reported;
