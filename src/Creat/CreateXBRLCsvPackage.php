@@ -158,6 +158,7 @@ class CreateXBRLCsvPackage
 
         $files = [];
         $filingIndicators = [];
+        $reportedFacts = [];
 
         foreach ($this->moduleMetadata['tables'] ?? [] as $table) {
             $templateName = $table['template'] ?? null;
@@ -196,7 +197,22 @@ class CreateXBRLCsvPackage
                 continue;
             }
 
-            $files[$csvFileName] = $this->renderTableCsv($template, $factsByTable[$tableBaseName]);
+            // A datapoint shared by two tables is one fact: report it once (in the first
+            // table that has it), as the xBRL-XML writer does — duplicates also multiply
+            // formula evaluations in validators.
+            $tableFacts = [];
+            foreach ($factsByTable[$tableBaseName] as $fact) {
+                $key = $this->factIdentity($fact);
+                if ($key !== null && isset($reportedFacts[$key])) {
+                    continue;
+                }
+                if ($key !== null) {
+                    $reportedFacts[$key] = true;
+                }
+                $tableFacts[] = $fact;
+            }
+
+            $files[$csvFileName] = $this->renderTableCsv($template, $tableFacts);
             $filingIndicators[$filingIndicator] = true;
         }
 
@@ -479,6 +495,21 @@ class CreateXBRLCsvPackage
         }
 
         return true;
+    }
+
+    /**
+     * Concept + non-default dimensions (+ currency sheet, open-table row): what makes two
+     * facts the same. Null for facts that are not plain datapoints (open-table key cells).
+     */
+    private function factIdentity(array $fact): ?string
+    {
+        if (empty($fact['metric']) || empty($fact['context']) || !is_array($fact['context'])) {
+            return null;
+        }
+        $dims = array_filter($this->normalizeFactDimensions($fact), fn ($v) => !is_string($v) || !preg_match('/:q?x0$/i', $v));
+        ksort($dims);
+
+        return json_encode($dims).'|'.($fact['sheetcode'] ?? '').'|'.($fact['row_index'] ?? '');
     }
 
     private function normalizeFactDimensions(array $fact): array
