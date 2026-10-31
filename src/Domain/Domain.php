@@ -94,6 +94,7 @@ class Domain
 
             if (strpos($row, 'hier.xsd') !== false) {
                 $artifacts['hier'] = Data::getTax($row);
+                $artifacts['hier']['__file'] = $row;   // to resolve relative member hrefs
             } elseif (strpos($row, 'mem.xsd') !== false) {
                 $artifacts['mem'] = self::mem($row);
             }
@@ -172,6 +173,7 @@ class Domain
                 'to' => $row['to'] ?? null,
                 'order' => $row['order'] ?? null,
                 'arcrole' => $row['arcrole'] ?? null,
+                'usable' => $row['usable'] ?? null,
             ]);
         }
 
@@ -240,7 +242,8 @@ class Domain
             if (!empty($presentation)) {
                 return [
                     'presentation' => $presentation,
-                    'namespace' => $mem['namespace'] ?? [],
+                    // members of other domains keep their own prefixes for the values
+                    'namespace' => array_merge((array) ($mem['namespace'] ?? []), self::$foreignNamespaces),
                     'imports' => $mem['imports'] ?? [],
                 ];
             }
@@ -329,34 +332,128 @@ class Domain
             return [];
         }
 
-        $rows = self::getHierarchyRows($hierarchy, $hierDef);
+        $rows = self::treeOrder(self::getHierarchyRows($hierarchy, $hierDef));
 
         if (empty($rows)) {
             return [];
         }
 
-        $pre_ = [];
-        $pre__ = [];
-
-        foreach ($rows as $key => $hier):
-            $search = self::findMemberLabel($mem[$lang], $hier);
-            if (!empty($search) && !empty($hier['order'])):
-
-                if (strpos(Format::getAfterSpecChar($hier['href'], '_'), '_') !== false):
-
-                    $pre__['__' . $hier['order']] = array_merge($hier, $search);
-
-                else:
-                    $pre_['_' . $hier['order']] = array_merge($hier, $search);
-                endif;
+        // One entry per member in tree order (parents before children), each with its
+        // depth. Keys are positions: arcs at different levels share "order" values, so
+        // keying by order made members overwrite each other (and order 0 was dropped).
+        $pre = [];
+        $i = 0;
+        self::$foreignNamespaces = [];
+        foreach ($rows as $hier):
+            $search = self::findMemberLabel($mem[$lang], $hier)
+                ?? self::foreignMemberLabel((string) ($hier['href'] ?? ''), $lang, $hierDef['__file'] ?? null);
+            if (!empty($search)):
+                $pre['_' . (++$i)] = array_merge($hier, $search, ['level' => $hier['level'], 'tree_order' => $i]);
             endif;
         endforeach;
 
-        $pre = $pre_ + $pre__;
-
-        ksort($pre, SORT_NATURAL);
-
         return $pre;
+    }
+
+    /** Taxonomy root folder (under the public tax dir) to resolve absolute member URLs in. */
+    public static ?string $taxonomyRoot = null;
+
+    /** Namespaces (prefix => URI) of other owners' member files a hierarchy used. */
+    public static array $foreignNamespaces = [];
+
+    /**
+     * The label of a member another owner defines (an owner's hierarchy over an EBA
+     * domain points at http://www.eba.europa.eu/…/mem.xsd#eba_x1): read from that
+     * member file in the same taxonomy; its namespace is remembered for the values.
+     */
+    private static function foreignMemberLabel(string $href, string $lang, ?string $baseFile = null): ?array
+    {
+        static $files = [];
+        $file = null;
+        if (preg_match('#^https?://([^/]+)/([^\#]+)\#(.+)$#i', $href, $m)) {
+            $roots = self::$taxonomyRoot ? [Config::publicDir() . self::$taxonomyRoot] : (glob(Config::publicDir() . '*', GLOB_ONLYDIR) ?: []);
+            foreach ($roots as $root) {
+                $candidate = rtrim($root, '/') . '/' . $m[1] . '/' . $m[2];
+                if (is_file($candidate)) {
+                    $file = $candidate;
+                    break;
+                }
+            }
+        } elseif ($baseFile && preg_match('#^([^\#]+\.xsd)\#(.+)$#i', $href, $rel)) {
+            // A relative href to another domain's members (EBA 4.x hierarchies
+            // combine domains: dom/qtt/4.2/hier → ../../qta/mem.xsd#eba_qx2073).
+            $candidate = realpath(dirname($baseFile) . DIRECTORY_SEPARATOR . $rel[1]);
+            $file = ($candidate && is_file($candidate)) ? $candidate : null;
+            $m = [null, null, null, $rel[2]];
+        }
+        if (!$file) {
+            return null;
+        }
+        $files[$file] ??= self::mem($file);
+        $foreign = $files[$file];
+        foreach ((array) ($foreign['namespace'] ?? []) as $prefix => $uri) {
+            self::$foreignNamespaces[$prefix] = $uri;
+        }
+        $foreignLang = Data::checkLang($foreign) ?: $lang;
+        static $targets = [];
+        $targets[$file] ??= preg_match('/targetNamespace="([^"]+)"/', (string) file_get_contents($file, false, null, 0, 4000), $tn) ? $tn[1] : null;
+        $prefix = $targets[$file] ? array_search($targets[$file], (array) ($foreign['namespace'] ?? []), true) : false;
+        foreach ((array) ($foreign[$foreignLang] ?? []) as $row) {
+            if (!empty($row['href']) && Format::getAfterSpecChar($row['href'], '#') === $m[3]) {
+                // The value is a QName in the member's own namespace (eba_qTA:qx2013).
+                if ($prefix && str_contains($m[3], '_')) {
+                    $row['qname'] = $prefix . ':' . substr($m[3], strpos($m[3], '_') + 1);
+                }
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Hierarchy arcs (from → to, order) as a depth-first list with a level: the roots
+     * are the children of the domain head; siblings by order. A member reached twice
+     * keeps its first place.
+     */
+    private static function treeOrder(array $rows): array
+    {
+        if (empty($rows)) {
+            return [];
+        }
+        $children = [];
+        $targets = [];
+        foreach ($rows as $row) {
+            if (!isset($row['from'], $row['to'])) {
+                continue;   // the head's own locator (the domain)
+            }
+            $children[$row['from']][] = $row;
+            $targets[$row['to']] = true;
+        }
+        if (!$children) {
+            return array_map(fn ($r) => $r + ['level' => 0], array_values($rows));
+        }
+        $out = [];
+        $seen = [];
+        $walk = function ($from, $level) use (&$walk, &$children, &$out, &$seen) {
+            $list = $children[$from] ?? [];
+            usort($list, fn ($a, $b) => (float) ($a['order'] ?? 0) <=> (float) ($b['order'] ?? 0));
+            foreach ($list as $row) {
+                if (isset($seen[$row['to']])) {
+                    continue;
+                }
+                $seen[$row['to']] = true;
+                $out[] = $row + ['level' => $level];
+                $walk($row['to'], $level + 1);
+            }
+        };
+        foreach (array_keys($children) as $from) {
+            if (!isset($targets[$from])) {
+                $walk($from, 0);   // a head (domain) or a parent not itself reached
+            }
+        }
+
+        return $out;
     }
 
     /**

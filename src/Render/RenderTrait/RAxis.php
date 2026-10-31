@@ -117,6 +117,12 @@ trait RAxis
                     continue;
                 }
 
+                // A closed hypercube admits no cell lacking one of its explicit dimensions
+                // (one listing members): a cell without that dimension is not in it.
+                if (array_diff($this->explicitDefinitionDimensions($item), array_values(array_diff_key($dom, ['metric' => 1])))) {
+                    continue;
+                }
+
                 $itemMemberKeys = $this->extractDefinitionMemberKeys($item);
                 $extraMemberCount = count(array_diff($itemMemberKeys, $requestedMemberKeys));
                 $score = [$extraMemberCount, count($itemMemberKeys)];
@@ -136,13 +142,27 @@ trait RAxis
             if (isset($dom['metric']) && isset($item[$dom['metric']])):
                 $dif = array_diff_key($item, $dom);
 
-                if (count($dif) == (count($item) - count($dom) + 1)):
+                if (count($dif) == (count($item) - count($dom) + 1)
+                    && !array_diff($this->explicitDefinitionDimensions($item), array_values(array_diff_key($dom, ['metric' => 1])))):
                     return $item[$dom['metric']];
                 endif;
             endif;
         }
 
         return false;
+    }
+
+    /** Explicit dimensions of a definition item: those with member keys ("dim:domain:member"). */
+    private function explicitDefinitionDimensions(array $item): array
+    {
+        $dims = [];
+        foreach (array_keys($item) as $key) {
+            if (substr_count((string) $key, ':') >= 2) {
+                $dims[strtok((string) $key, ':')] = true;
+            }
+        }
+
+        return array_keys($dims);
     }
 
     private function extractDefinitionMemberKeys(array $item): array
@@ -216,7 +236,8 @@ trait RAxis
         }
 
         [$prefix, $local] = explode(':', $value, 2);
-        $parts = explode('_', $prefix);
+        // "eba_qOR" → eba / qOR; an owner's domain code may itself contain "_" ("fba_FBA_RS").
+        $parts = explode('_', $prefix, 2);
         $root = $parts[0] ?? null;
         $domain = $parts[1] ?? null;
 
@@ -227,7 +248,7 @@ trait RAxis
         return $root . '_' . $domain . ':' . $root . '_' . $local;
     }
 
-    public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array())
+    public function buildXAxis(array $elements, $parentId = 0, $n = 0, $node = array(), $inheritedConcept = 'false')
     {
         $branch = array();
 
@@ -243,7 +264,9 @@ trait RAxis
                         array_replace($node, $this->specification['rend']['ruleNode'][$element['from']]['dimension']);
                 endif;
 
-                $children = $this->buildXAxis($elements, $element['to'], $n + 1, $node);
+                $ownConcept = $this->specification['rend']['ruleNode'][$element['to']]['concept'] ?? 'false';
+                // An ancestor's concept applies to its descendants (XBRL Table aspect rules).
+                $children = $this->buildXAxis($elements, $element['to'], $n + 1, $node, $ownConcept !== 'false' ? $ownConcept : $inheritedConcept);
                 if ($children):
 
                     $element['row'] = $n++;
@@ -260,6 +283,10 @@ trait RAxis
 
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
+                    $element['childOrder'] = $this->specification['rend']['ruleNode'][$element['to']]['parentChildOrder'] ?? 'parent-first';
 
 
                     $count_leaves = count(array_column($children, 'leaves_element'));
@@ -297,6 +324,11 @@ trait RAxis
                         $element['rollup'] = true;
                     endif;
 
+                    // A non-abstract inner node (DPM 2.0: dimensions, no concept) has its own data
+                    // column next to its children's, so it counts as a column, not as a branch.
+                    $count_leaves -= count(array_filter($children, fn ($c) => isset($c['leaves_element'])
+                        && ($c['abstract'] ?? 'false') !== 'true' && !isset($c['rollup'])));
+
                     $element['leaves_element'] = $element['all_element'] - $count_leaves;
 
 
@@ -321,6 +353,9 @@ trait RAxis
                         $element['dimension'] = $node;
                     endif;
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
 
                     $element['row'] = $n;
 
@@ -331,7 +366,7 @@ trait RAxis
         return $branch;
     }
 
-    public function buildYAxis(array $elements, $parentId = 0, $n = 0, $node = array())
+    public function buildYAxis(array $elements, $parentId = 0, $n = 0, $node = array(), $inheritedConcept = 'false')
     {
         $branch = array();
 
@@ -345,7 +380,9 @@ trait RAxis
                         array_replace($node, $this->specification['rend']['ruleNode'][$element['from']]['dimension']);
                 endif;
 
-                $children = $this->buildYAxis($elements, $element['to'], $n + 1, $node);
+                $ownConcept = $this->specification['rend']['ruleNode'][$element['to']]['concept'] ?? 'false';
+                // An ancestor's concept applies to its descendants (XBRL Table aspect rules).
+                $children = $this->buildYAxis($elements, $element['to'], $n + 1, $node, $ownConcept !== 'false' ? $ownConcept : $inheritedConcept);
 
                 if ($children):
                     $element['col'] = $n++;
@@ -361,15 +398,28 @@ trait RAxis
                     endif;
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
 
+                    // children-first (a total after its breakdown): the parent's own row
+                    // follows its children; an abstract header stays on top.
+                    $childrenFirst = ($this->specification['rend']['ruleNode'][$element['to']]['parentChildOrder'] ?? '') === 'children-first'
+                        && ($element['abstract'] ?? 'false') !== 'true';
 
-                    $branch[] = $element;
+                    if (!$childrenFirst):
+                        $branch[] = $element;
+                    endif;
 
                     foreach ($children as $c):
 
                         $branch[] = $c;
 
                     endforeach;
+
+                    if ($childrenFirst):
+                        $branch[] = $element;
+                    endif;
                     $n--;
 
                 else:
@@ -386,6 +436,9 @@ trait RAxis
 
 
                     $element['metric'] = $this->specification['rend']['ruleNode'][$element['to']]['concept'];
+                    if ($element['metric'] === 'false' && $inheritedConcept !== 'false'):
+                        $element['inheritedMetric'] = $inheritedConcept;
+                    endif;
                     $element['col'] = $n;
 
                     $branch[] = $element;
@@ -624,6 +677,29 @@ trait RAxis
      * @param $dim
      * @return bool
      */
+    /** "<open-axis dimension>:<member>" — a member constraint on a dimension the table leaves open. */
+    private function isOpenKeyMember(string $key): bool
+    {
+        static $open = [];
+        $id = spl_object_id($this);
+        if (!isset($open[$id])) {
+            $open[$id] = [];
+            foreach ((array) ($this->specification['rend']['aspectNode'] ?? []) as $node) {
+                if (!empty($node['dimensionAspect'])) {
+                    // def keys name a dimension owner_local (eba_qBQW), not by its QName
+                    $open[$id][] = substr($node['dimensionAspect'], strpos($node['dimensionAspect'], ':') + 1);
+                }
+            }
+        }
+        foreach ($open[$id] as $local) {
+            if (preg_match('/^[A-Za-z0-9]+_' . preg_quote($local, '/') . ':/', $key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function checkDef($dim)
     {
         $dimA = json_decode($dim, true);
@@ -640,8 +716,18 @@ trait RAxis
         if (empty($this->tmp)):
             foreach ($this->specification['def'] as $key => $val):
 
-                if (count($val) > 2):
+                // A hypercube is metric + hyp (+ its dimensions); one without dimensions
+                // still admits the metric's dimensionless cells.
+                // (metric + one typed dimension is also two items: "hyp:<typed dim>")
+                $hasHyp = isset($val['hyp']) || (bool) preg_grep('/^hyp(:|$)/', array_map('strval', array_keys($val)));
+                if (count($val) > 2 || (count($val) === 2 && $hasHyp)):
                     foreach ($val as $keyVal => $row):
+                        // An open-axis key takes whatever value the reporter enters; member
+                        // lists on it are domain siblings the linkbase parse attached (they
+                        // share a domain with a fixed dimension, e.g. MREL qBQW / qFAB).
+                        if ($this->isOpenKeyMember((string) $keyVal)):
+                            continue;
+                        endif;
                         $this->tmp[$key][$keyVal] = $row;
                     endforeach;
                 endif;
@@ -693,6 +779,13 @@ trait RAxis
      */
     public function getHierKey($domain, $value)
     {
+        // A member of another domain in the hierarchy carries its own QName.
+        if (is_array($value)) {
+            if (!empty($value['qname'])) {
+                return $value['qname'];
+            }
+            $value = $value['href'] ?? '';
+        }
 
 
         $_searckKey = Format::getAfterSpecChar(Format::getBeforeSpecChar($value, '_'), '#');
@@ -739,6 +832,10 @@ trait RAxis
             $metric = ['metric' => $y['metric']];
         elseif (isset($z['metric']) && $z['metric'] != 'false'):
             $metric = ['metric' => $z['metric']];
+        elseif (!empty($x['inheritedMetric'])):
+            $metric = ['metric' => $x['inheritedMetric']];
+        elseif (!empty($y['inheritedMetric'])):
+            $metric = ['metric' => $y['inheritedMetric']];
         endif;
 
 

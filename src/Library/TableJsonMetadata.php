@@ -156,6 +156,18 @@ class TableJsonMetadata
             }
         }
 
+        // Exact, not a subset: a cell with more dimensions than the datapoint (e.g. a
+        // currency or country row under a total) is a different datapoint. Default
+        // members (x0 / qx0) are not part of a datapoint's dimensions.
+        foreach ($payload as $dimensionKey => $value) {
+            if ($dimensionKey === 'typedMember' || preg_match('/:q?x0$/i', (string) $value)) {
+                continue;
+            }
+            if (!array_key_exists($dimensionKey, $groupDimensions)) {
+                return false;
+            }
+        }
+
         return true;
     }
 

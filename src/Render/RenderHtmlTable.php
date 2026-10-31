@@ -129,6 +129,12 @@ class RenderHtmlTable
 
                         $sheetsHtml = $this->explicitDimensionSheets($domain, $explicitDimension['dimension']);
 
+                    elseif (!empty($this->specification['rend']['aspectNode'][key($row)]['dimensionAspect'])):
+
+                        // An open z-axis on a typed dimension (e.g. one sheet per covered bond
+                        // issue): the reporter names each sheet by its key value.
+                        $sheetsHtml = $this->typedDimensionSheets($this->specification['rend']['aspectNode'][key($row)]['dimensionAspect'], $ZSelect);
+
                     else:
 
                         $ZAxis =
@@ -187,7 +193,7 @@ class RenderHtmlTable
                 // Save position, if the position has a child elelemt then it is an indent for the number of child elements
                 $tmpPos = NULL;
                 if (isset($this_value['leaves_element'])):
-                    $tmpPos = $col + $this_value['leaves_element'] - 1;
+                    $tmpPos = $col + $this_value['leaves_element'] - 1 + $this->ownColumn($this_value);
                 elseif (isset($this_value['metric_element'])):
                     $tmpPos = $col + $this_value['metric_element'] - 1;
                 else:
@@ -205,7 +211,7 @@ class RenderHtmlTable
                 if (isset($this_value['leaves_element'])):
 
                     // if the position has childe elements and if the parent element is filled or has a metric value
-                    $tmpPos = $col + $this_value['leaves_element'] - 1;
+                    $tmpPos = $col + $this_value['leaves_element'] - 1 + $this->ownColumn($this_value);
                 elseif (isset($this_value['metric_element'])):
                     // if the position has childe elements just consider the number of metrics
                     $tmpPos = $col + $this_value['metric_element'] - 1;
@@ -218,11 +224,18 @@ class RenderHtmlTable
             }
 
 
+            // A data column with sub-columns: its own column comes first (parent-first) or
+            // after its children (children-first, a total after its breakdown).
+            // (A rollup parent — one with a concept — already counts its own column in leaves.)
+            $childrenFirst = isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'
+                && ($this_value['childOrder'] ?? '') === 'children-first';
+            $own = $childrenFirst ? $col + $this_value['leaves_element'] - (isset($this_value['rollup']) ? 1 : 0) : $col;
+
             //Rc-code
-            $this->col[$col]['rc-code'] = $rcCode =
+            $this->col[$own]['rc-code'] = $rcCode =
                 $this->searchLabel($this->specification['rend']['path'] . "#" . $this_value['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
-            $this->col[$col]['id'] = $this_value['to'];
-            $this->col[$col]['abstract'] = $this_value['abstract'];
+            $this->col[$own]['id'] = $this_value['to'];
+            $this->col[$own]['abstract'] = $this_value['abstract'];
 
 
             $lebelName = $this->searchLabel($this_value['to'], 'http://www.xbrl.org/2008/role/label');
@@ -238,15 +251,17 @@ class RenderHtmlTable
                 ));
 
 
-                $head->setHeaderContents($this_value['row'] + 1, $col + $colspanMax, '', array('data-id' => $this_value['to'],
+                $head->setHeaderContents($this_value['row'] + 1, $own + $colspanMax, '', array('data-id' => $this_value['to'],
                     'class' => 'xbrl-th xbrl-none-top',
                     'rowspan' => $rowspanMax - $this_value['row'] - 1,
                 ));
 
-                $head->setHeaderContents($rowspanMax, $col + $colspanMax, $rcCode, array('class' => 'rc-code', 'data-col' => $col));
+                $head->setHeaderContents($rowspanMax, $own + $colspanMax, $rcCode, array('class' => 'rc-code', 'data-col' => $own));
 
 
-                $col = $col + 1;
+                if (!$childrenFirst):
+                    $col = $col + 1;   // children-first: the children start here, the parent's column follows them
+                endif;
             else:
                 //
                 if (isset($this_value['metric_element']) && $this_value['metric_element'] != 0 && $this_value['metric_element'] < $this_value['leaves_element']):
@@ -525,6 +540,18 @@ class RenderHtmlTable
 
 
 
+    /** An option's text indented by its depth in the hierarchy (tree, not a flat list). */
+    private function indentedOption(array $row): string
+    {
+        return str_repeat('&nbsp;&nbsp;&nbsp;', (int) ($row['level'] ?? 0)) . ($row['@content'] ?? '');
+    }
+
+    /** An abstract hierarchy node (usable="false") is shown for structure but cannot be chosen. */
+    private function optionState(array $row): string
+    {
+        return (($row['usable'] ?? '') === 'false') ? " disabled='disabled'" : '';
+    }
+
     private function showSheets($ZAxis, $ZSelect)
     {
         $ZSelect=json_decode($ZSelect,true);
@@ -563,6 +590,78 @@ class RenderHtmlTable
         return $html;
     }
 
+    /** The typed domain element of a typed dimension (eba_typ:CC), from the definition linkbase. */
+    private function typedDomainOf(string $dimension): ?string
+    {
+        $id = Format::getAfterSpecChar($dimension, ':');
+        foreach ($this->roleType as $role):
+            $def = DomToArray::search_multdim($this->specification['def'][$role], 'name', $id);
+            if (is_array($def)):
+                $def = end($def);
+                if (!empty($def['typ']['key']) && !empty($def['typ']['name'])):
+                    return $def['typ']['key'] . ':' . $def['typ']['name'];
+                endif;
+            endif;
+        endforeach;
+
+        return null;
+    }
+
+    /**
+     * Sheets of a typed z-axis: the keys already reported (sheet code "k:<value>") plus a
+     * field for a new one. The option value carries the typed member the way open-row
+     * keys do, so saving and both exports treat it as part of every fact's context.
+     */
+    private function typedDimensionSheets(string $dimension, $ZSelect): string
+    {
+        $typ = $this->typedDomainOf($dimension);
+        $current = json_decode((string) $ZSelect, true)['sheet'] ?? null;
+        $keys = [];
+        foreach ((array) $this->sheet as $code => $state):
+            if (is_string($code) && str_starts_with($code, 'k:')):
+                $keys[$code] = $state;
+            endif;
+        endforeach;
+        if ($current && str_starts_with($current, 'k:')):
+            $keys[$current] = 'active';
+        endif;
+
+        $esc = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES);
+        $html = "<div class='app-typed-sheet' data-dimension='" . $esc($dimension) . "' data-typ='" . $esc($typ) . "'>";
+        $html .= "<select class='form-select app-sheet-select' id='sheet' name='sheet' aria-label='Table sheet selector'>";
+        $html .= "<option value=''" . (empty($keys) || !$current ? ' selected' : '') . ">— choose a key or add one —</option>";
+        foreach ($keys as $code => $state):
+            $value = substr($code, 2);
+            $json = json_encode(['typedMember' => [$dimension => ['typ' => $typ, 'value' => $value]], 'sheet' => $code]);
+            $html .= "<option value='" . $esc($json) . "'" . ($code === $current ? ' selected' : '') . ">" . $esc($value) . "</option>";
+        endforeach;
+        $html .= "</select>";
+        $html .= "<div class='app-typed-sheet-add'><input type='text' class='form-control form-control-sm' id='sheetKeyNew' placeholder='New key (" . $esc(Format::getAfterSpecChar($dimension, ':')) . ")…' autocomplete='off'>"
+            . "<button type='button' class='btn btn-sm btn-outline-primary' id='sheetKeyAdd'>Add</button></div>";
+        $html .= "</div>";
+
+        return $html;
+    }
+
+    /**
+     * 1 when an x-axis node with children also has its own data column (a non-abstract,
+     * non-rollup parent spans leaves + 1 columns, see its header colspan); without it the
+     * next sibling took the position of the parent's last child (AE F_36.01.b c0050).
+     */
+    private function ownColumn(array $node): int
+    {
+        return (($node['abstract'] ?? 'false') !== 'true' && !isset($node['rollup'])) ? 1 : 0;
+    }
+
+    /** Prefix of a z-axis member: owner of the member id + '_' + domain code (eba_ + CU). */
+    private function zMemberPrefix(string $memberId, string $domainQName, string $fallback): string
+    {
+        $owner = strstr($memberId, '_', true);
+        $domain = str_contains($domainQName, ':') ? substr($domainQName, strpos($domainQName, ':') + 1) : '';
+
+        return ($owner !== false && $owner !== '' && $domain !== '') ? $owner . '_' . $domain : $fallback;
+    }
+
     private function explicitDimensionSheets($ZAxis, $dimension)
     {
 
@@ -581,13 +680,15 @@ class RenderHtmlTable
 
             $id = substr($sheet['href'], strpos($sheet['href'], "#") + 1);
             $keyID = substr($id, strpos($id, "_") + 1);
-            $key[$dim] = $dom . ':' . $keyID;
+            // The member's QName is in its domain's namespace (eba_CU:AED), not in the
+            // domain's own (eba_exp:CU) — that one is the filter, not the member.
+            $key[$dim] = $this->zMemberPrefix($id, $dimension[$dim], $dom) . ':' . $keyID;
 
             $exist =
                 isset($this->sheet[$keyID]) && $this->sheet[$keyID] == 'found' ? "data-icon='fa-table'" : "";
             $selected = isset($this->sheet[$keyID]) && $this->sheet[$keyID] == 'active' ? 'selected' : '';
 
-            $html .= "<option $exist $selected id=" . $keyID . " data-id='$keyID' value='" . json_encode(array_merge($key, ['sheet' => $keyID])) . "' >" . $sheet['@content'] . "</option>";
+            $html .= "<option $exist $selected id=" . $keyID . " data-id='$keyID' value='" . json_encode(array_merge($key, ['sheet' => $keyID])) . "' >" . $this->indentedOption($sheet) . "</option>";
 
             $shee++;
         endforeach;
@@ -661,8 +762,8 @@ class RenderHtmlTable
                 $selectedSet = preg_split('/\s+/', trim((string)$value)) ?: [];
                 $input .= "<select multiple class='xbrl-select xbrl-select-multi' id='$name' name='" . $name . "[value][]'>";
                 foreach ($def['presentation'] as $row):
-                    $opt = $this->getHierKey($def['namespace'], $row['href']);
-                    $input .= "<option " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $row['@content'] . "</option>";
+                    $opt = $this->getHierKey($def['namespace'], $row);
+                    $input .= "<option" . $this->optionState($row) . " " . (in_array($opt, $selectedSet, true) ? "selected='selected'" : "") . " value='" . $opt . "'>" . $this->indentedOption($row) . "</option>";
                 endforeach;
                 $input .= "</select>";
 
@@ -682,7 +783,7 @@ class RenderHtmlTable
                         $input .= "<option value=''></option>";
                         foreach ($def['presentation'] as $row):
 
-                            $input .= "<option " . (($this->getHierKey($def['namespace'], $row['href']) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row['href']) . "'>" . $row['@content'] . "</option>";
+                            $input .= "<option" . $this->optionState($row) . " " . (($this->getHierKey($def['namespace'], $row) == $value) ? "selected='selected'" : "") . " value='" . $this->getHierKey($def['namespace'], $row) . "'>" . $this->indentedOption($row) . "</option>";
                         endforeach;
                         $input .= "</select>";
                     endif;
@@ -708,6 +809,11 @@ class RenderHtmlTable
                 case 'xbrli:dateItemType':
 
                     $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input datepicker' />";
+                    break;
+                case 'xbrli:integerItemType':
+                case 'xbrli:nonNegativeIntegerItemType':
+
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter a whole number' name='" . $name . "[value]' type='number' step='1' value='$value' class='xbrl-input' />";
                     break;
                 case 'xbrli:decimalItemType':
 
@@ -746,7 +852,7 @@ class RenderHtmlTable
 
                         $selected = $value == json_encode($key) ? 'selected' : '';
 
-                        $input .= "<option $selected value='" . json_encode($key) . "'>" . $row['@content'] . "</option>";
+                        $input .= "<option $selected value='" . json_encode($key) . "'>" . $this->indentedOption($row) . "</option>";
 
                     endif;
                 endforeach;

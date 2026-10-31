@@ -36,6 +36,7 @@ class CreateXBRLFromDB extends XMLWriter
     private $schemaRef;
     private $fIndicators = [];
     private $tempContext = [];
+    private $writtenFacts = [];
     private $id = 1;
     private $Metric = [];
     private $unit = [];
@@ -54,7 +55,7 @@ class CreateXBRLFromDB extends XMLWriter
         'decimalsPercentage' => 4,
         'decimalsInteger' => 0,
         'decimalsDecimal' => 2,
-        'filingIndicators' => [],    // code => bool; false is written as filed="false"
+        'filingIndicators' => [],    // code => bool; false is written as find:filed="false"
     ];
 
     /**
@@ -186,6 +187,10 @@ class CreateXBRLFromDB extends XMLWriter
             $this->traverseArray($tax);
         endif;
 
+
+        // schemaRef always needs these, even for an instance without table data
+        // (they used to come only from the tables' schemas → malformed XML).
+        $this->namespace += ['link' => 'http://www.xbrl.org/2003/linkbase', 'xlink' => 'http://www.w3.org/1999/xlink'];
 
         ksort($this->namespace);
 
@@ -349,8 +354,22 @@ class CreateXBRLFromDB extends XMLWriter
 
             if (!empty($row['metric'])):
 
+                // A context is identified by the members it writes (sorted), not by the
+                // raw JSON: the same datapoint saved from two tables used to get two
+                // s-equal contexts, i.e. a duplicate fact (EBA filing rule 2.16) that
+                // also multiplied formula evaluations (2^n messages in Arelle).
+                $arr = json_decode($row['context'], true) ?: [];
+                $members = $this->collectScenarioMembers($arr);
+                usort($members, fn ($a, $b) => strcmp((string) $a['dimension'], (string) $b['dimension']));
+                $ctxKey = json_encode($members);
+                $currency = preg_match('/^[A-Z]{3}$/', (string) $row['sheetcode']) ? $row['sheetcode'] : '';
+                $factKey = $row['metric'].'|'.$ctxKey.'|'.$currency;
+                if (isset($this->writtenFacts[$factKey])):
+                    continue;
+                endif;
+                $this->writtenFacts[$factKey] = true;
 
-                $tmpId = array_search($row['context'], $this->tempContext, TRUE);
+                $tmpId = array_search($ctxKey, $this->tempContext, TRUE);
 
                 if ($tmpId === false):
                     $this->Metric[$i]['contextRef'] = $this->id;
@@ -364,12 +383,9 @@ class CreateXBRLFromDB extends XMLWriter
                 $this->Metric[$i]['string_value'] = $row['string_value'];
                 $this->Metric[$i]['sheetcode'] = $row['sheetcode'];
 
-                $arr = json_decode($row['context'], true);
+                if (in_array($ctxKey, $this->tempContext, TRUE) == FALSE):
 
-
-                if (in_array($row['context'], $this->tempContext) == FALSE):
-
-                    $this->tempContext[] = $row['context'];
+                    $this->tempContext[] = $ctxKey;
 
                     //context
                     $this->startElementNS('xbrli', 'context', NULL);
@@ -392,7 +408,7 @@ class CreateXBRLFromDB extends XMLWriter
                     $this->writeElementNS('xbrli', 'instant', NULL, date('Y-m-d', strtotime($this->date)));
                     $this->endElement();
 
-                    $scenarioMembers = $this->collectScenarioMembers($arr);
+                    $scenarioMembers = $members;
 
                     if (!empty($scenarioMembers)) {
                         $this->startElement('xbrli:scenario');
@@ -492,13 +508,13 @@ class CreateXBRLFromDB extends XMLWriter
         endforeach;
 
         // Filing Rules: every template of the module carries an indicator — negative
-        // (filed="false") unless it is reported. Needs the module JSON (DPM 2.0 modules).
+        // (find:filed="false") unless it is reported. Needs the module JSON (DPM 2.0 modules).
         $info = ModuleInfo::load((string) $this->moduleDir, (string) $this->schemaRef);
         foreach (array_keys($info['filing_indicators'] ?? []) as $code):
             $fillingIndicator += [$code => false];
         endforeach;
 
-        // Explicit choices win: false is written as filed="false", true is reported even without data.
+        // Explicit choices win: false is written as find:filed="false", true is reported even without data.
         foreach ((array) $this->options['filingIndicators'] as $code => $filed):
             $fillingIndicator[str_replace('-', '.', strtoupper((string) $code))] = (bool) $filed;
         endforeach;
@@ -509,7 +525,8 @@ class CreateXBRLFromDB extends XMLWriter
 
             $this->startElementNS('find', 'filingIndicator', NULL);
             if ($row === false):
-                $this->writeAttribute('filed', 'false');
+                // A global attribute of the filing-indicators schema: it must be qualified.
+                $this->writeAttribute('find:filed', 'false');
             endif;
             $this->writeAttribute('contextRef', 'cfi');
             $this->writeRaw($key);

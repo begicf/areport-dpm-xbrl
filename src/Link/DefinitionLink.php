@@ -2,6 +2,8 @@
 
 namespace AReportDpmXBRL\Link;
 
+use AReportDpmXBRL\Library\Normalise;
+
 use DOMXPath;
 use AReportDpmXBRL\Dimension\Dimension;
 use AReportDpmXBRL\Library\DomToArray;
@@ -116,8 +118,7 @@ class DefinitionLink implements XbrlInterface
 
                     if ($element['contextElement'] == 'scenario'):
                         $metric=array();
-                        $pathMetric =
-                            dirname($this->path) . DIRECTORY_SEPARATOR . strtok($loc[$element['from']]['href'], "#");
+                        $pathMetric = Normalise::resolveHref($this->path, $loc[$element['from']]['href']);
 
 
                         $xpath =
@@ -164,11 +165,18 @@ class DefinitionLink implements XbrlInterface
 
                 else:
 
+                    // A hypercube without dimensions: the metric's all-arc has no children,
+                    // but the metric must still be recorded (cells with no dimensions).
+                    if (($element['contextElement'] ?? '') == 'scenario' && strpos($loc[$element['from']]['href'] ?? '', 'met.xsd') !== false):
+                        $metric = Metric::getMetric(Normalise::resolveHref($this->path, $loc[$element['from']]['href']),
+                            substr($loc[$element['from']]['href'], strpos($loc[$element['from']]['href'], "#") + 1));
+                        $branch[$loc[$element['from']]['key']] = array_merge($element, $metric, array('href' => $loc[$element['from']]['href']));
+                    endif;
+
                     //if href cointains met.xsd that means that is metric.value
                     if (strpos($loc[$element['to']]['href'], 'met.xsd') !== false):
 
-                        $pathMetric =
-                            dirname($this->path) . DIRECTORY_SEPARATOR . strtok($loc[$element['to']]['href'], "#");
+                        $pathMetric = Normalise::resolveHref($this->path, $loc[$element['to']]['href']);
 
                         $xpath = substr($loc[$element['to']]['href'], strpos($loc[$element['to']]['href'], "#") + 1);
 
@@ -179,8 +187,7 @@ class DefinitionLink implements XbrlInterface
 
                     elseif (strpos($loc[$element['to']]['href'], 'dim.xsd') !== false):
 
-                        $pathDim =
-                            dirname($this->path) . DIRECTORY_SEPARATOR . strtok($loc[$element['to']]['href'], "#");
+                        $pathDim = Normalise::resolveHref($this->path, $loc[$element['to']]['href']);
 
                         $xpath = substr($loc[$element['to']]['href'], strpos($loc[$element['to']]['href'], "#") + 1);
 

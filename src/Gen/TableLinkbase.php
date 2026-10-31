@@ -133,6 +133,7 @@ class TableLinkbase implements XbrlInterface {
                 'concept' => ($concept->length != 0) ? trim($concept[0]->nodeValue) : "false",
                 'abstract' => ($element->getAttribute('abstract') == true) ? $element->getAttribute('abstract') : "false",
                 'dimension' => (count($dimArr)) ? $dimArr : "false",
+                'parentChildOrder' => $element->getAttribute('parentChildOrder') ?: 'parent-first',
             ];
 
         endforeach;
