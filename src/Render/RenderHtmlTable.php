@@ -575,6 +575,15 @@ class RenderHtmlTable
         return $html;
     }
 
+    /** Prefix of a z-axis member: owner of the member id + '_' + domain code (eba_ + CU). */
+    private function zMemberPrefix(string $memberId, string $domainQName, string $fallback): string
+    {
+        $owner = strstr($memberId, '_', true);
+        $domain = str_contains($domainQName, ':') ? substr($domainQName, strpos($domainQName, ':') + 1) : '';
+
+        return ($owner !== false && $owner !== '' && $domain !== '') ? $owner . '_' . $domain : $fallback;
+    }
+
     private function explicitDimensionSheets($ZAxis, $dimension)
     {
 
@@ -593,7 +602,9 @@ class RenderHtmlTable
 
             $id = substr($sheet['href'], strpos($sheet['href'], "#") + 1);
             $keyID = substr($id, strpos($id, "_") + 1);
-            $key[$dim] = $dom . ':' . $keyID;
+            // The member's QName is in its domain's namespace (eba_CU:AED), not in the
+            // domain's own (eba_exp:CU) — that one is the filter, not the member.
+            $key[$dim] = $this->zMemberPrefix($id, $dimension[$dim], $dom) . ':' . $keyID;
 
             $exist =
                 isset($this->sheet[$keyID]) && $this->sheet[$keyID] == 'found' ? "data-icon='fa-table'" : "";
