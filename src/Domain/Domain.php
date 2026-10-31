@@ -329,34 +329,70 @@ class Domain
             return [];
         }
 
-        $rows = self::getHierarchyRows($hierarchy, $hierDef);
+        $rows = self::treeOrder(self::getHierarchyRows($hierarchy, $hierDef));
 
         if (empty($rows)) {
             return [];
         }
 
-        $pre_ = [];
-        $pre__ = [];
-
-        foreach ($rows as $key => $hier):
+        // One entry per member in tree order (parents before children), each with its
+        // depth. Keys are positions: arcs at different levels share "order" values, so
+        // keying by order made members overwrite each other (and order 0 was dropped).
+        $pre = [];
+        $i = 0;
+        foreach ($rows as $hier):
             $search = self::findMemberLabel($mem[$lang], $hier);
-            if (!empty($search) && !empty($hier['order'])):
-
-                if (strpos(Format::getAfterSpecChar($hier['href'], '_'), '_') !== false):
-
-                    $pre__['__' . $hier['order']] = array_merge($hier, $search);
-
-                else:
-                    $pre_['_' . $hier['order']] = array_merge($hier, $search);
-                endif;
+            if (!empty($search)):
+                $pre['_' . (++$i)] = array_merge($hier, $search, ['level' => $hier['level'], 'tree_order' => $i]);
             endif;
         endforeach;
 
-        $pre = $pre_ + $pre__;
-
-        ksort($pre, SORT_NATURAL);
-
         return $pre;
+    }
+
+    /**
+     * Hierarchy arcs (from → to, order) as a depth-first list with a level: the roots
+     * are the children of the domain head; siblings by order. A member reached twice
+     * keeps its first place.
+     */
+    private static function treeOrder(array $rows): array
+    {
+        if (empty($rows)) {
+            return [];
+        }
+        $children = [];
+        $targets = [];
+        foreach ($rows as $row) {
+            if (!isset($row['from'], $row['to'])) {
+                continue;   // the head's own locator (the domain)
+            }
+            $children[$row['from']][] = $row;
+            $targets[$row['to']] = true;
+        }
+        if (!$children) {
+            return array_map(fn ($r) => $r + ['level' => 0], array_values($rows));
+        }
+        $out = [];
+        $seen = [];
+        $walk = function ($from, $level) use (&$walk, &$children, &$out, &$seen) {
+            $list = $children[$from] ?? [];
+            usort($list, fn ($a, $b) => (float) ($a['order'] ?? 0) <=> (float) ($b['order'] ?? 0));
+            foreach ($list as $row) {
+                if (isset($seen[$row['to']])) {
+                    continue;
+                }
+                $seen[$row['to']] = true;
+                $out[] = $row + ['level' => $level];
+                $walk($row['to'], $level + 1);
+            }
+        };
+        foreach (array_keys($children) as $from) {
+            if (!isset($targets[$from])) {
+                $walk($from, 0);   // a head (domain) or a parent not itself reached
+            }
+        }
+
+        return $out;
     }
 
     /**
