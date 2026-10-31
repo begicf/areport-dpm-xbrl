@@ -80,7 +80,8 @@ trait RTrait
             return null;
         }
 
-        return preg_replace('/^[A-Z]+(?:_[0-9A-Za-z]+)+(?:\.[0-9A-Za-z]+)+:\s*/', '', $name) ?? $name;
+        // "C_07.00.a:Name", also with a suffix ("C_07.00.a_EXT:Name").
+        return preg_replace('/^[A-Z]+(?:_[0-9A-Za-z]+)+(?:[._][0-9A-Za-z]+)+:\s*/', '', $name) ?? $name;
     }
 
     /**

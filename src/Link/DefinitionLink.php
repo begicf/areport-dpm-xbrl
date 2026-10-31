@@ -2,6 +2,8 @@
 
 namespace AReportDpmXBRL\Link;
 
+use AReportDpmXBRL\Library\Normalise;
+
 use DOMXPath;
 use AReportDpmXBRL\Dimension\Dimension;
 use AReportDpmXBRL\Library\DomToArray;
@@ -116,8 +118,7 @@ class DefinitionLink implements XbrlInterface
 
                     if ($element['contextElement'] == 'scenario'):
                         $metric=array();
-                        $pathMetric =
-                            dirname($this->path) . DIRECTORY_SEPARATOR . strtok($loc[$element['from']]['href'], "#");
+                        $pathMetric = Normalise::resolveHref($this->path, $loc[$element['from']]['href']);
 
 
                         $xpath =
@@ -167,8 +168,7 @@ class DefinitionLink implements XbrlInterface
                     //if href cointains met.xsd that means that is metric.value
                     if (strpos($loc[$element['to']]['href'], 'met.xsd') !== false):
 
-                        $pathMetric =
-                            dirname($this->path) . DIRECTORY_SEPARATOR . strtok($loc[$element['to']]['href'], "#");
+                        $pathMetric = Normalise::resolveHref($this->path, $loc[$element['to']]['href']);
 
                         $xpath = substr($loc[$element['to']]['href'], strpos($loc[$element['to']]['href'], "#") + 1);
 
@@ -179,8 +179,7 @@ class DefinitionLink implements XbrlInterface
 
                     elseif (strpos($loc[$element['to']]['href'], 'dim.xsd') !== false):
 
-                        $pathDim =
-                            dirname($this->path) . DIRECTORY_SEPARATOR . strtok($loc[$element['to']]['href'], "#");
+                        $pathDim = Normalise::resolveHref($this->path, $loc[$element['to']]['href']);
 
                         $xpath = substr($loc[$element['to']]['href'], strpos($loc[$element['to']]['href'], "#") + 1);
 
