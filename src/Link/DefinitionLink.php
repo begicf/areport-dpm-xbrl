@@ -106,7 +106,7 @@ class DefinitionLink implements XbrlInterface
 
     }
 
-    private function buildHyp(array $elements, $from = 0, $loc, $prev = '')
+    private function buildHyp(array $elements, $from, $loc, $prev = '')
     {
         $branch = array();
 

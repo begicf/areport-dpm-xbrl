@@ -119,7 +119,9 @@ class RenderHtmlTable
 
                 case 'z':
 
-                    if (isset($this->specification['rend']['aspectNode'][key($row)]) && isset($this->specification['rend']['aspectNodeFilterArc'])):
+                    // An aspect node with its own member filter: one sheet per filtered member.
+                    // (Other axes may have filtered aspect nodes too; only this node's filter counts.)
+                    if (isset($this->specification['rend']['aspectNode'][key($row)]) && isset($this->specification['rend']['aspectNodeFilterArc'][key($row)])):
 
                         $explicitDimension =
                             $this->specification['rend']['explicitDimension'][$this->specification['rend']['aspectNodeFilterArc'][key($row)]['to']];
