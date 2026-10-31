@@ -224,11 +224,17 @@ class RenderHtmlTable
             }
 
 
+            // A data column with sub-columns: its own column comes first (parent-first) or
+            // after its children (children-first, a total after its breakdown).
+            $childrenFirst = isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'
+                && !isset($this_value['rollup']) && ($this_value['childOrder'] ?? '') === 'children-first';
+            $own = $childrenFirst ? $col + $this_value['leaves_element'] : $col;
+
             //Rc-code
-            $this->col[$col]['rc-code'] = $rcCode =
+            $this->col[$own]['rc-code'] = $rcCode =
                 $this->searchLabel($this->specification['rend']['path'] . "#" . $this_value['to'], 'http://www.eurofiling.info/xbrl/role/rc-code');
-            $this->col[$col]['id'] = $this_value['to'];
-            $this->col[$col]['abstract'] = $this_value['abstract'];
+            $this->col[$own]['id'] = $this_value['to'];
+            $this->col[$own]['abstract'] = $this_value['abstract'];
 
 
             $lebelName = $this->searchLabel($this_value['to'], 'http://www.xbrl.org/2008/role/label');
@@ -244,15 +250,17 @@ class RenderHtmlTable
                 ));
 
 
-                $head->setHeaderContents($this_value['row'] + 1, $col + $colspanMax, '', array('data-id' => $this_value['to'],
+                $head->setHeaderContents($this_value['row'] + 1, $own + $colspanMax, '', array('data-id' => $this_value['to'],
                     'class' => 'xbrl-th xbrl-none-top',
                     'rowspan' => $rowspanMax - $this_value['row'] - 1,
                 ));
 
-                $head->setHeaderContents($rowspanMax, $col + $colspanMax, $rcCode, array('class' => 'rc-code', 'data-col' => $col));
+                $head->setHeaderContents($rowspanMax, $own + $colspanMax, $rcCode, array('class' => 'rc-code', 'data-col' => $own));
 
 
-                $col = $col + 1;
+                if (!$childrenFirst):
+                    $col = $col + 1;   // children-first: the children start here, the parent's column follows them
+                endif;
             else:
                 //
                 if (isset($this_value['metric_element']) && $this_value['metric_element'] != 0 && $this_value['metric_element'] < $this_value['leaves_element']):
