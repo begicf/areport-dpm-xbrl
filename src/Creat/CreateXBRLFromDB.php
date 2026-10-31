@@ -3,6 +3,8 @@
 namespace AReportDpmXBRL\Creat;
 
 use AReportDpmXBRL\Config\Config;
+use AReportDpmXBRL\Library\FactValue;
+use AReportDpmXBRL\Library\MetricTypes;
 use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Format;
@@ -43,6 +45,17 @@ class CreateXBRLFromDB extends XMLWriter
 
     private $defaultMI;
 
+    /** Filing options; see setOptions(). */
+    private $options = [
+        'baseCurrency' => null,      // ISO 4217, defaults to Config::$monetaryItem
+        'monetaryScale' => 1000,     // form amounts are in thousands
+        'decimalsMonetary' => -3,
+        'decimalsPercentage' => 4,
+        'decimalsInteger' => 0,
+        'decimalsDecimal' => 2,
+        'filingIndicators' => [],    // code => bool; false is written as filed="false"
+    ];
+
     /**
      * CreateXBRLFromDB constructor.
      * @param $data
@@ -65,8 +78,17 @@ class CreateXBRLFromDB extends XMLWriter
         $this->defaultMI = Config::$monetaryItem;
     }
 
+    /** Override filing options (currency, scale, decimals, filing indicators). */
+    public function setOptions(array $options): self
+    {
+        $this->options = array_merge($this->options, array_intersect_key($options, $this->options));
+
+        return $this;
+    }
+
     public function writeXbrl()
     {
+        $this->defaultMI = strtoupper((string) ($this->options['baseCurrency'] ?: Config::$monetaryItem));
         $this->openMemory();
 
         $this->XbrlHeader();
@@ -225,13 +247,17 @@ class CreateXBRLFromDB extends XMLWriter
     {
 
 
-        switch ($unit):
-            case stripos($unit, ':mi') !== false:
-                return ['typ' => $this->defaultMI, 'decimals' => -3];
-            case stripos($unit, ':pi') !== false:
-                return ['typ' => 'upure', 'decimals' => 4, 'format' => 'pi'];
-            case stripos($unit, ':ii') !== false:
-                return ['typ' => 'upure', 'decimals' => 0, 'format' => 'int'];
+        // The metric's XBRL type from the taxonomy dictionary (DPM 2.0 names like
+        // eba_met:qABJ carry no type), falling back to DPM 1.0 name prefixes (mi/pi/ii).
+        switch (MetricTypes::kind($this->moduleDir, $unit)):
+            case 'monetary':
+                return ['typ' => $this->defaultMI];
+            case 'percentage':
+                return ['typ' => 'upure', 'format' => 'pi'];
+            case 'integer':
+                return ['typ' => 'upure', 'format' => 'int'];
+            case 'decimal':
+                return ['typ' => 'upure', 'format' => 'dec'];
             default:
                 return 'false';
 
@@ -258,9 +284,9 @@ class CreateXBRLFromDB extends XMLWriter
                 case $this->defaultMI:
                     $this->startElementNS('xbrli', 'unit', NULL);
                     $this->writeAttribute(
-                        'id', 'uEUR'
+                        'id', 'u' . $this->defaultMI
                     );
-                    $this->writeElementNs('xbrli', 'measure', NULL, 'iso4217:EUR');
+                    $this->writeElementNs('xbrli', 'measure', NULL, 'iso4217:' . $this->defaultMI);
                     $this->endElement();
                     break;
                 case 'upure':
@@ -273,7 +299,7 @@ class CreateXBRLFromDB extends XMLWriter
                     break;
                 default:
 
-                    if (!is_numeric($key)):
+                    if (preg_match('/^[A-Z]{3}$/', (string) $key)):
                         if ($row != 'false'):
                             $this->startElementNS('xbrli', 'unit', NULL);
                             $this->writeAttribute(
@@ -421,31 +447,18 @@ class CreateXBRLFromDB extends XMLWriter
                     switch ($this->unit[$row['metric']]['typ']):
 
                         case $this->defaultMI:
-
-                            if (is_numeric($row['sheetcode'])):
-                                $this->writeAttribute('decimals', '-3');
-                                $this->writeAttribute('unitRef', 'u' . Config::$monetaryItem);
-                                $this->writeRaw($row['numeric_value'] * 1000);
-                            else:
-
-                                $this->writeAttribute('decimals', '-3');
-                                $this->writeAttribute('unitRef', 'u' . $row['sheetcode']);
-                                $this->writeRaw($row['numeric_value'] * 1000);
-
-
-                            endif;
-
+                            // A currency sheet (z-axis code like "USD") sets the unit; any other sheet uses the base currency.
+                            $currency = preg_match('/^[A-Z]{3}$/', (string) $row['sheetcode']) ? $row['sheetcode'] : $this->defaultMI;
+                            $this->writeAttribute('decimals', (string) $this->options['decimalsMonetary']);
+                            $this->writeAttribute('unitRef', 'u' . $currency);
+                            $this->writeRaw(FactValue::forKind('monetary', $row['numeric_value'], (int) $this->options['monetaryScale']));
                             break;
                         case 'upure':
-                            if ($this->unit[$row['metric']]['format'] == 'pi'):
-                                $this->writeAttribute('decimals', $this->unit[$row['metric']]['decimals']);
-                                $this->writeAttribute('unitRef', 'uPURE');
-                                $this->writeRaw(floatval($row['numeric_value']) / 100);
-                            else:
-                                $this->writeAttribute('decimals', $this->unit[$row['metric']]['decimals']);
-                                $this->writeAttribute('unitRef', 'uPURE');
-                                $this->writeRaw((int)$row['numeric_value']);
-                            endif;
+                            $format = $this->unit[$row['metric']]['format'];
+                            $decimals = ['pi' => 'decimalsPercentage', 'int' => 'decimalsInteger', 'dec' => 'decimalsDecimal'][$format];
+                            $this->writeAttribute('decimals', (string) $this->options[$decimals]);
+                            $this->writeAttribute('unitRef', 'uPURE');
+                            $this->writeRaw(FactValue::forKind(['pi' => 'percentage', 'int' => 'integer', 'dec' => 'decimal'][$format], $row['numeric_value']));
                             break;
                         default:
                             $this->writeRaw($row['string_value']);
@@ -477,11 +490,19 @@ class CreateXBRLFromDB extends XMLWriter
             $fillingIndicator[$code] = TRUE;
         endforeach;
 
+        // Explicit choices win: false is written as filed="false", true is reported even without data.
+        foreach ((array) $this->options['filingIndicators'] as $code => $filed):
+            $fillingIndicator[str_replace('-', '.', strtoupper((string) $code))] = (bool) $filed;
+        endforeach;
+
         ksort($fillingIndicator, SORT_NATURAL);
 
         foreach ($fillingIndicator as $key => $row):
 
             $this->startElementNS('find', 'filingIndicator', NULL);
+            if ($row === false):
+                $this->writeAttribute('filed', 'false');
+            endif;
             $this->writeAttribute('contextRef', 'cfi');
             $this->writeRaw($key);
             $this->endElement();
