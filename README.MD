@@ -2,7 +2,9 @@
 
 `AreportDpmXBRL` is a PHP library that reads DPM/XBRL supervisory reporting taxonomies (EBA, ECB, national extensions), renders their tables as HTML forms, and writes `xBRL-CSV` and `xBRL-XML` instances that follow the EBA filing rules.
 
-It powers the [AReport](https://github.com/begicf/areport) web application. It lives in its own package so the taxonomy logic can be developed and tested independently.
+It powers the [AReport](https://areport.net) web application ([source](https://github.com/begicf/areport)). It lives in its own package so the taxonomy logic can be developed and tested independently.
+
+[![AReport — the web application built on this library](docs/landing.png)](https://areport.net)
 
 ## What it covers
 
@@ -95,9 +97,9 @@ $xml = (new CreateXBRLFromDB($period, $entityId, $modulePath, $facts, $filedTabl
 
 - Keep DPM `1.0` behaviour stable while extending DPM `2.0` support, and check changes against old and new taxonomy packages.
 - AReport keeps a render baseline of 10 EBA tables. A rendering change should leave it unchanged unless the change is intended.
-- Work on `master`. A push deploys the AReport demo (<https://demo.areport.net>) with the latest library.
+- Work on `master`. A push deploys the AReport demo with the latest library.
 
 ## Related repositories
 
-- AReport application: <https://github.com/begicf/areport>
+- AReport: <https://areport.net> · source: <https://github.com/begicf/areport>
 - Package repository: <https://github.com/begicf/areport-dpm-xbrl>
