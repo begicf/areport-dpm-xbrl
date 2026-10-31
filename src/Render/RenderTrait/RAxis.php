@@ -318,6 +318,11 @@ trait RAxis
                         $element['rollup'] = true;
                     endif;
 
+                    // A non-abstract inner node (DPM 2.0: dimensions, no concept) has its own data
+                    // column next to its children's, so it counts as a column, not as a branch.
+                    $count_leaves -= count(array_filter($children, fn ($c) => isset($c['leaves_element'])
+                        && ($c['abstract'] ?? 'false') !== 'true' && !isset($c['rollup'])));
+
                     $element['leaves_element'] = $element['all_element'] - $count_leaves;
 
 

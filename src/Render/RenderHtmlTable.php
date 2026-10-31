@@ -187,7 +187,7 @@ class RenderHtmlTable
                 // Save position, if the position has a child elelemt then it is an indent for the number of child elements
                 $tmpPos = NULL;
                 if (isset($this_value['leaves_element'])):
-                    $tmpPos = $col + $this_value['leaves_element'] - 1;
+                    $tmpPos = $col + $this_value['leaves_element'] - 1 + $this->ownColumn($this_value);
                 elseif (isset($this_value['metric_element'])):
                     $tmpPos = $col + $this_value['metric_element'] - 1;
                 else:
@@ -205,7 +205,7 @@ class RenderHtmlTable
                 if (isset($this_value['leaves_element'])):
 
                     // if the position has childe elements and if the parent element is filled or has a metric value
-                    $tmpPos = $col + $this_value['leaves_element'] - 1;
+                    $tmpPos = $col + $this_value['leaves_element'] - 1 + $this->ownColumn($this_value);
                 elseif (isset($this_value['metric_element'])):
                     // if the position has childe elements just consider the number of metrics
                     $tmpPos = $col + $this_value['metric_element'] - 1;
@@ -573,6 +573,16 @@ class RenderHtmlTable
         endforeach;
         $html .= "</select>";
         return $html;
+    }
+
+    /**
+     * 1 when an x-axis node with children also has its own data column (a non-abstract,
+     * non-rollup parent spans leaves + 1 columns, see its header colspan); without it the
+     * next sibling took the position of the parent's last child (AE F_36.01.b c0050).
+     */
+    private function ownColumn(array $node): int
+    {
+        return (($node['abstract'] ?? 'false') !== 'true' && !isset($node['rollup'])) ? 1 : 0;
     }
 
     /** Prefix of a z-axis member: owner of the member id + '_' + domain code (eba_ + CU). */
