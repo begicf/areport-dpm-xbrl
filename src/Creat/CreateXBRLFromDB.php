@@ -188,6 +188,10 @@ class CreateXBRLFromDB extends XMLWriter
         endif;
 
 
+        // schemaRef always needs these, even for an instance without table data
+        // (they used to come only from the tables' schemas → malformed XML).
+        $this->namespace += ['link' => 'http://www.xbrl.org/2003/linkbase', 'xlink' => 'http://www.w3.org/1999/xlink'];
+
         ksort($this->namespace);
 
         $unset = ['model', 'table', 'formula', 'df', 'gen', 'label', 'xml', 'xsi', 'nonnum', 'xbrli', 'xs', 'xbrldt'];
