@@ -36,6 +36,7 @@ class CreateXBRLFromDB extends XMLWriter
     private $schemaRef;
     private $fIndicators = [];
     private $tempContext = [];
+    private $writtenFacts = [];
     private $id = 1;
     private $Metric = [];
     private $unit = [];
@@ -349,8 +350,22 @@ class CreateXBRLFromDB extends XMLWriter
 
             if (!empty($row['metric'])):
 
+                // A context is identified by the members it writes (sorted), not by the
+                // raw JSON: the same datapoint saved from two tables used to get two
+                // s-equal contexts, i.e. a duplicate fact (EBA filing rule 2.16) that
+                // also multiplied formula evaluations (2^n messages in Arelle).
+                $arr = json_decode($row['context'], true) ?: [];
+                $members = $this->collectScenarioMembers($arr);
+                usort($members, fn ($a, $b) => strcmp((string) $a['dimension'], (string) $b['dimension']));
+                $ctxKey = json_encode($members);
+                $currency = preg_match('/^[A-Z]{3}$/', (string) $row['sheetcode']) ? $row['sheetcode'] : '';
+                $factKey = $row['metric'].'|'.$ctxKey.'|'.$currency;
+                if (isset($this->writtenFacts[$factKey])):
+                    continue;
+                endif;
+                $this->writtenFacts[$factKey] = true;
 
-                $tmpId = array_search($row['context'], $this->tempContext, TRUE);
+                $tmpId = array_search($ctxKey, $this->tempContext, TRUE);
 
                 if ($tmpId === false):
                     $this->Metric[$i]['contextRef'] = $this->id;
@@ -364,12 +379,9 @@ class CreateXBRLFromDB extends XMLWriter
                 $this->Metric[$i]['string_value'] = $row['string_value'];
                 $this->Metric[$i]['sheetcode'] = $row['sheetcode'];
 
-                $arr = json_decode($row['context'], true);
+                if (in_array($ctxKey, $this->tempContext, TRUE) == FALSE):
 
-
-                if (in_array($row['context'], $this->tempContext) == FALSE):
-
-                    $this->tempContext[] = $row['context'];
+                    $this->tempContext[] = $ctxKey;
 
                     //context
                     $this->startElementNS('xbrli', 'context', NULL);
@@ -392,7 +404,7 @@ class CreateXBRLFromDB extends XMLWriter
                     $this->writeElementNS('xbrli', 'instant', NULL, date('Y-m-d', strtotime($this->date)));
                     $this->endElement();
 
-                    $scenarioMembers = $this->collectScenarioMembers($arr);
+                    $scenarioMembers = $members;
 
                     if (!empty($scenarioMembers)) {
                         $this->startElement('xbrli:scenario');
