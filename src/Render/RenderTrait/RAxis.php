@@ -721,6 +721,13 @@ trait RAxis
      */
     public function getHierKey($domain, $value)
     {
+        // A member of another domain in the hierarchy carries its own QName.
+        if (is_array($value)) {
+            if (!empty($value['qname'])) {
+                return $value['qname'];
+            }
+            $value = $value['href'] ?? '';
+        }
 
 
         $_searckKey = Format::getAfterSpecChar(Format::getBeforeSpecChar($value, '_'), '#');

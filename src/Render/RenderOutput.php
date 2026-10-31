@@ -778,7 +778,7 @@ class RenderOutput
 
                     foreach ($def['presentation'] as $row):
 
-                        if (isset($value['string']) && $this->getHierKey($def['namespace'], $row['href']) === $value['string']):
+                        if (isset($value['string']) && $this->getHierKey($def['namespace'], $row) === $value['string']):
                             $value = $row['@content'];
                         endif;
 
