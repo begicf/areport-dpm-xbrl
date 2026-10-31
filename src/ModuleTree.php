@@ -237,8 +237,11 @@ class ModuleTree
 
                                 $getTableXsd = Format::findStringInArray($mod['imports'], $getFile['basename']);
 
-                                $getFileXsdSource =
-                                    $path . DIRECTORY_SEPARATOR . 'mod' . DIRECTORY_SEPARATOR . current($getTableXsd);
+                                $import = (string) current($getTableXsd);
+                                // A module may import another owner's table by its official URL.
+                                $getFileXsdSource = preg_match('#^https?://#i', $import)
+                                    ? $this->path . DIRECTORY_SEPARATOR . preg_replace('#^https?://#i', '', $import)
+                                    : $path . DIRECTORY_SEPARATOR . 'mod' . DIRECTORY_SEPARATOR . $import;
 
                             else:
 
