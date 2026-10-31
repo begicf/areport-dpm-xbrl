@@ -129,6 +129,12 @@ class RenderHtmlTable
 
                         $sheetsHtml = $this->explicitDimensionSheets($domain, $explicitDimension['dimension']);
 
+                    elseif (!empty($this->specification['rend']['aspectNode'][key($row)]['dimensionAspect'])):
+
+                        // An open z-axis on a typed dimension (e.g. one sheet per covered bond
+                        // issue): the reporter names each sheet by its key value.
+                        $sheetsHtml = $this->typedDimensionSheets($this->specification['rend']['aspectNode'][key($row)]['dimensionAspect'], $ZSelect);
+
                     else:
 
                         $ZAxis =
@@ -572,6 +578,59 @@ class RenderHtmlTable
             $shee++;
         endforeach;
         $html .= "</select>";
+        return $html;
+    }
+
+    /** The typed domain element of a typed dimension (eba_typ:CC), from the definition linkbase. */
+    private function typedDomainOf(string $dimension): ?string
+    {
+        $id = Format::getAfterSpecChar($dimension, ':');
+        foreach ($this->roleType as $role):
+            $def = DomToArray::search_multdim($this->specification['def'][$role], 'name', $id);
+            if (is_array($def)):
+                $def = end($def);
+                if (!empty($def['typ']['key']) && !empty($def['typ']['name'])):
+                    return $def['typ']['key'] . ':' . $def['typ']['name'];
+                endif;
+            endif;
+        endforeach;
+
+        return null;
+    }
+
+    /**
+     * Sheets of a typed z-axis: the keys already reported (sheet code "k:<value>") plus a
+     * field for a new one. The option value carries the typed member the way open-row
+     * keys do, so saving and both exports treat it as part of every fact's context.
+     */
+    private function typedDimensionSheets(string $dimension, $ZSelect): string
+    {
+        $typ = $this->typedDomainOf($dimension);
+        $current = json_decode((string) $ZSelect, true)['sheet'] ?? null;
+        $keys = [];
+        foreach ((array) $this->sheet as $code => $state):
+            if (is_string($code) && str_starts_with($code, 'k:')):
+                $keys[$code] = $state;
+            endif;
+        endforeach;
+        if ($current && str_starts_with($current, 'k:')):
+            $keys[$current] = 'active';
+        endif;
+
+        $esc = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES);
+        $html = "<div class='app-typed-sheet' data-dimension='" . $esc($dimension) . "' data-typ='" . $esc($typ) . "'>";
+        $html .= "<select class='form-select app-sheet-select' id='sheet' name='sheet' aria-label='Table sheet selector'>";
+        $html .= "<option value=''" . (empty($keys) || !$current ? ' selected' : '') . ">— choose a key or add one —</option>";
+        foreach ($keys as $code => $state):
+            $value = substr($code, 2);
+            $json = json_encode(['typedMember' => [$dimension => ['typ' => $typ, 'value' => $value]], 'sheet' => $code]);
+            $html .= "<option value='" . $esc($json) . "'" . ($code === $current ? ' selected' : '') . ">" . $esc($value) . "</option>";
+        endforeach;
+        $html .= "</select>";
+        $html .= "<div class='app-typed-sheet-add'><input type='text' class='form-control form-control-sm' id='sheetKeyNew' placeholder='New key (" . $esc(Format::getAfterSpecChar($dimension, ':')) . ")…' autocomplete='off'>"
+            . "<button type='button' class='btn btn-sm btn-outline-primary' id='sheetKeyAdd'>Add</button></div>";
+        $html .= "</div>";
+
         return $html;
     }
 
