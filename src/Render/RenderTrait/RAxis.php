@@ -677,6 +677,29 @@ trait RAxis
      * @param $dim
      * @return bool
      */
+    /** "<open-axis dimension>:<member>" — a member constraint on a dimension the table leaves open. */
+    private function isOpenKeyMember(string $key): bool
+    {
+        static $open = [];
+        $id = spl_object_id($this);
+        if (!isset($open[$id])) {
+            $open[$id] = [];
+            foreach ((array) ($this->specification['rend']['aspectNode'] ?? []) as $node) {
+                if (!empty($node['dimensionAspect'])) {
+                    // def keys name a dimension owner_local (eba_qBQW), not by its QName
+                    $open[$id][] = substr($node['dimensionAspect'], strpos($node['dimensionAspect'], ':') + 1);
+                }
+            }
+        }
+        foreach ($open[$id] as $local) {
+            if (preg_match('/^[A-Za-z0-9]+_' . preg_quote($local, '/') . ':/', $key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function checkDef($dim)
     {
         $dimA = json_decode($dim, true);
@@ -699,6 +722,12 @@ trait RAxis
                 $hasHyp = isset($val['hyp']) || (bool) preg_grep('/^hyp(:|$)/', array_map('strval', array_keys($val)));
                 if (count($val) > 2 || (count($val) === 2 && $hasHyp)):
                     foreach ($val as $keyVal => $row):
+                        // An open-axis key takes whatever value the reporter enters; member
+                        // lists on it are domain siblings the linkbase parse attached (they
+                        // share a domain with a fixed dimension, e.g. MREL qBQW / qFAB).
+                        if ($this->isOpenKeyMember((string) $keyVal)):
+                            continue;
+                        endif;
                         $this->tmp[$key][$keyVal] = $row;
                     endforeach;
                 endif;
