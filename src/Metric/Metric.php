@@ -77,12 +77,15 @@ class Metric
 
             $host = !empty($metric['hierarchy']) ? Format::getHostFromUrl($metric['hierarchy']) : null;
 
+            Domain::$taxonomyRoot = Directory::getRootName(self::$path) ?: null;
             if (!empty($host) && isset($hier[$host]['def'][$metric['hierarchy']])):
                 $mem = Domain::mem(dirname($hier[$host]['dir']) . DIRECTORY_SEPARATOR . 'mem.xsd');
 
                 $metric['namespace'] = $mem['namespace'];
                 $metric['imports'] = $mem['imports'];
                 $metric['presentation'] = Domain::getHierarchyPresentation($metric['hierarchy'], $hier[$host], $mem);
+                // Members of other owners in the hierarchy keep their own prefixes for the values.
+                $metric['namespace'] = array_merge((array) $metric['namespace'], Domain::$foreignNamespaces);
             endif;
 
             if (empty($metric['presentation']) && !empty($metric['hierarchy'])):

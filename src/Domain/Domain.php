@@ -341,14 +341,60 @@ class Domain
         // keying by order made members overwrite each other (and order 0 was dropped).
         $pre = [];
         $i = 0;
+        self::$foreignNamespaces = [];
         foreach ($rows as $hier):
-            $search = self::findMemberLabel($mem[$lang], $hier);
+            $search = self::findMemberLabel($mem[$lang], $hier)
+                ?? self::foreignMemberLabel((string) ($hier['href'] ?? ''), $lang);
             if (!empty($search)):
                 $pre['_' . (++$i)] = array_merge($hier, $search, ['level' => $hier['level'], 'tree_order' => $i]);
             endif;
         endforeach;
 
         return $pre;
+    }
+
+    /** Taxonomy root folder (under the public tax dir) to resolve absolute member URLs in. */
+    public static ?string $taxonomyRoot = null;
+
+    /** Namespaces (prefix => URI) of other owners' member files a hierarchy used. */
+    public static array $foreignNamespaces = [];
+
+    /**
+     * The label of a member another owner defines (an owner's hierarchy over an EBA
+     * domain points at http://www.eba.europa.eu/…/mem.xsd#eba_x1): read from that
+     * member file in the same taxonomy; its namespace is remembered for the values.
+     */
+    private static function foreignMemberLabel(string $href, string $lang): ?array
+    {
+        static $files = [];
+        if (!preg_match('#^https?://([^/]+)/([^\#]+)\#(.+)$#i', $href, $m)) {
+            return null;
+        }
+        $roots = self::$taxonomyRoot ? [Config::publicDir() . self::$taxonomyRoot] : (glob(Config::publicDir() . '*', GLOB_ONLYDIR) ?: []);
+        $file = null;
+        foreach ($roots as $root) {
+            $candidate = rtrim($root, '/') . '/' . $m[1] . '/' . $m[2];
+            if (is_file($candidate)) {
+                $file = $candidate;
+                break;
+            }
+        }
+        if (!$file) {
+            return null;
+        }
+        $files[$file] ??= self::mem($file);
+        $foreign = $files[$file];
+        foreach ((array) ($foreign['namespace'] ?? []) as $prefix => $uri) {
+            self::$foreignNamespaces[$prefix] = $uri;
+        }
+        $foreignLang = Data::checkLang($foreign) ?: $lang;
+        foreach ((array) ($foreign[$foreignLang] ?? []) as $row) {
+            if (!empty($row['href']) && Format::getAfterSpecChar($row['href'], '#') === $m[3]) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     /**
