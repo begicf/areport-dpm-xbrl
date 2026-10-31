@@ -226,9 +226,10 @@ class RenderHtmlTable
 
             // A data column with sub-columns: its own column comes first (parent-first) or
             // after its children (children-first, a total after its breakdown).
+            // (A rollup parent — one with a concept — already counts its own column in leaves.)
             $childrenFirst = isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'
-                && !isset($this_value['rollup']) && ($this_value['childOrder'] ?? '') === 'children-first';
-            $own = $childrenFirst ? $col + $this_value['leaves_element'] : $col;
+                && ($this_value['childOrder'] ?? '') === 'children-first';
+            $own = $childrenFirst ? $col + $this_value['leaves_element'] - (isset($this_value['rollup']) ? 1 : 0) : $col;
 
             //Rc-code
             $this->col[$own]['rc-code'] = $rcCode =
