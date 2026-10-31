@@ -55,15 +55,36 @@ class MetricTypes
         }
 
         $owner = strtolower($m[1]);
-        $hosts = ['eba' => 'www.eba.europa.eu/eu/fr/xbrl/crr/dict/met'];
-        if (!isset($hosts[$owner])) {
-            return null;
+        $root = rtrim(Config::publicDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . trim($moduleDir, DIRECTORY_SEPARATOR);
+
+        if ($owner === 'eba') {
+            $file = $root . '/www.eba.europa.eu/eu/fr/xbrl/crr/dict/met' . (empty($m[2]) ? '' : '/' . $m[2]) . '/met.xsd';
+
+            return self::dictionary($file)[$local] ?? null;
         }
 
-        $file = rtrim(Config::publicDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . trim($moduleDir, DIRECTORY_SEPARATOR)
-            . DIRECTORY_SEPARATOR . $hosts[$owner] . (empty($m[2]) ? '' : '/' . $m[2]) . '/met.xsd';
+        // Another owner's metrics (a national regulator's fba_met, …): its dictionary sits
+        // under its own host, …/dict/met/met.xsd — look the metric up in those.
+        foreach (self::ownerDictionaries($root) as $file) {
+            if (isset(self::dictionary($file)[$local])) {
+                return self::dictionary($file)[$local];
+            }
+        }
 
-        return self::dictionary($file)[$local] ?? null;
+        return null;
+    }
+
+    /** @var array<string, array<int, string>> taxonomy root => non-EBA metric dictionaries */
+    private static $owners = [];
+
+    private static function ownerDictionaries(string $root): array
+    {
+        if (!array_key_exists($root, self::$owners)) {
+            $files = array_merge(glob($root . '/*/eu/fr/xbrl/*/dict/met/met.xsd') ?: [], glob($root . '/*/eu/fr/xbrl/*/dict/met/*/met.xsd') ?: []);
+            self::$owners[$root] = array_values(array_filter($files, fn ($f) => strpos($f, '/www.eba.europa.eu/') === false));
+        }
+
+        return self::$owners[$root];
     }
 
     private static function dictionary(string $file): array
