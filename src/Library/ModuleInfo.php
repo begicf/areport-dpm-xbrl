@@ -49,6 +49,8 @@ class ModuleInfo
         ksort($indicators, SORT_NATURAL);
 
         return [
+            // The module version's id in the EBA DPM 2.0 database (ModuleVersion.ModuleVID).
+            'module_vid' => isset($doc['ModuleVID']) ? (int) $doc['ModuleVID'] : null,
             'version' => $doc['ModuleVersion'] ?? null,
             'version_code' => self::versionCode($doc['ModuleVersion'] ?? null),
             'from' => ($doc['FromReferenceDate'] ?? '') ?: null,
