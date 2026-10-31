@@ -5,6 +5,7 @@ namespace AReportDpmXBRL\Creat;
 use AReportDpmXBRL\Config\Config;
 use AReportDpmXBRL\Library\FactValue;
 use AReportDpmXBRL\Library\MetricTypes;
+use AReportDpmXBRL\Library\ModuleInfo;
 use AReportDpmXBRL\Library\Data;
 use AReportDpmXBRL\Library\DomToArray;
 use AReportDpmXBRL\Library\Format;
@@ -488,6 +489,13 @@ class CreateXBRLFromDB extends XMLWriter
             }
 
             $fillingIndicator[$code] = TRUE;
+        endforeach;
+
+        // Filing Rules: every template of the module carries an indicator — negative
+        // (filed="false") unless it is reported. Needs the module JSON (DPM 2.0 modules).
+        $info = ModuleInfo::load((string) $this->moduleDir, (string) $this->schemaRef);
+        foreach (array_keys($info['filing_indicators'] ?? []) as $code):
+            $fillingIndicator += [$code => false];
         endforeach;
 
         // Explicit choices win: false is written as filed="false", true is reported even without data.
