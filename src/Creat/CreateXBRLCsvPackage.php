@@ -509,7 +509,12 @@ class CreateXBRLCsvPackage
         $dims = array_filter($this->normalizeFactDimensions($fact), fn ($v) => !is_string($v) || !preg_match('/:q?x0$/i', $v));
         ksort($dims);
 
-        return json_encode($dims).'|'.($fact['sheetcode'] ?? '').'|'.($fact['row_index'] ?? '');
+        // The row number only tells facts apart on an open table (typed key rows);
+        // a datapoint shared by two closed tables sits on different row codes.
+        $open = array_key_exists('typedMember', $fact['context'])
+            || (bool) array_filter($fact['context'], fn ($v) => is_string($v) && str_starts_with($v, '$'));
+
+        return json_encode($dims).'|'.($fact['sheetcode'] ?? '').($open ? '|'.($fact['row_index'] ?? '') : '');
     }
 
     private function normalizeFactDimensions(array $fact): array
