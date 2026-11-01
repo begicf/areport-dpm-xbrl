@@ -66,8 +66,10 @@ class Render
         endif;
 
 
+        // The table's own schema names its taxonomy folder; without it, domains are
+        // searched for across every installed taxonomy.
         if (!isset($this->additionalData['file_path'])):
-            $this->additionalData['file_path'] = Config::publicDir() . $this->filename;
+            $this->additionalData['file_path'] = $this->specification['tab_xsd_uri'] ?? Config::publicDir() . $this->filename;
         endif;
         return new RenderOutput($this->specification, $this->lang, $type, $this->additionalData);
 

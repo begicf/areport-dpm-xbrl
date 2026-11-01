@@ -21,7 +21,10 @@ use AReportDpmXBRL\Library\Format;
  */
 trait RAxis
 {
+    /** Definition-linkbase lookup caches (built once per render) — see checkDef(). */
     private $tmp = [];
+    private $tmpByMetric = null;
+    private $defCache = [];
 
     private function buildLegacyDefinitionMap(array $dimA): array
     {

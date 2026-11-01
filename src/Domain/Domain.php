@@ -25,6 +25,7 @@ class Domain
 {
 
     private static $dom;
+    private static array $domainCache = [];
 
     private static function appendCandidate(array &$candidates, string $candidate): void
     {
@@ -267,6 +268,13 @@ class Domain
      * @return array
      */
     public static function getDomain($path, $root): array
+    {
+        // The writers ask for the same domain once per cell of a column; finding its
+        // hierarchy walks the taxonomy folder, so remember it for the request.
+        return self::$domainCache[$root . "\0" . $path] ??= self::findDomain($path, $root);
+    }
+
+    private static function findDomain($path, $root): array
     {
         $resolved = self::resolveHierarchyData($path, $root);
 
