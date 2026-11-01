@@ -167,7 +167,7 @@ class RenderOutput
         if ($this->_type != 'pdf'):
             $this->drawHeader($s);
         else:
-            $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow(1, 1, $this->_col + $this->_colSpanMax, 2);
+            $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([1, 1, $this->_col + $this->_colSpanMax, 2]);
         endif;
 
         if (isset($this->_aspectNode['y'])):
@@ -226,10 +226,10 @@ class RenderOutput
             if ($this->_type != 'pdf'):
                 $this->drawHeader($s);
             else:
-                $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow(1, 1, $this->_col + $this->_colSpanMax, 2);
+                $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([1, 1, $this->_col + $this->_colSpanMax, 2]);
             endif;
 
-            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 3, $row)->mergeCellsByColumnAndRow(1, 3, $this->_col + $this->_colSpanMax, 3);
+            $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, 3], $row)->mergeCells([1, 3, $this->_col + $this->_colSpanMax, 3]);
 
             if (isset($this->_aspectNode['y'])):
                 $this->drawOpenContent($s, $XAxis, $ZAxis, $ZSelect);
@@ -300,10 +300,10 @@ class RenderOutput
         $headerTitleCol = 1 + $this->_colOffset;
         $headerTitleRow = 1 + $this->_rowOffset;
 
-        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($headerTitleCol, $headerTitleRow, $this->tableName());
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$headerTitleCol, $headerTitleRow], $this->tableName());
         $this->spreadsheet->setActiveSheetIndex($s)->getColumnDimensionByColumn($headerTitleCol)->setAutoSize(true);
-        $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow($headerTitleCol, $headerTitleRow, $this->_colSpanMax, $this->_rowSpanMax)
-            ->getStyleByColumnAndRow($headerTitleCol, $headerTitleRow, $this->_colSpanMax, $this->_rowSpanMax + 1)->applyFromArray($this->styleHeader());
+        $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([$headerTitleCol, $headerTitleRow, $this->_colSpanMax, $this->_rowSpanMax])
+            ->getStyle([$headerTitleCol, $headerTitleRow, $this->_colSpanMax, $this->_rowSpanMax + 1])->applyFromArray($this->styleHeader());
 
         $keys = array_keys($header);
 
@@ -367,25 +367,25 @@ class RenderOutput
             $lebelName = $this->searchLabel($this_value['to'], 'http://www.xbrl.org/2008/role/label');
             if (isset($this_value['leaves_element']) && $this_value['abstract'] != 'true'):
 
-                $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $lebelName);
+                $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$this->_col + $this->_colSpanMax, $this_value['row'] + 1], $lebelName);
                 $this->spreadsheet->setActiveSheetIndex($s)->getRowDimension($this_value['row'] + 1)->setRowHeight(70);
 
-                //    $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this_value['leaves_element'] + $this->_col + 1, $this_value['row'] + 1);
-                //    $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + $this->_colSpanMax+1, $this->_col + $this->_colSpanMax, $this->_rowSpanMax);
+                //    $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this_value['leaves_element'] + $this->_col + 1, $this_value['row'] + 1]);
+                //    $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([$this->_col + $this->_colSpanMax, $this_value['row'] + $this->_colSpanMax+1, $this->_col + $this->_colSpanMax, $this->_rowSpanMax]);
 
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this_value['leaves_element'] + $this->_col + 1, $this_value['row'] + 1)->applyFromArray($this->styleX());
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this_value['leaves_element'] + $this->_col + 1, $this_value['row'] + 1)->getAlignment()->setWrapText(true);
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this_value['leaves_element'] + $this->_col + 1, $this_value['row'] + 1])->applyFromArray($this->styleX());
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this_value['leaves_element'] + $this->_col + 1, $this_value['row'] + 1])->getAlignment()->setWrapText(true);
 
                 $colMerge =
                     isset($this_value['rollup']) ? $this_value['leaves_element'] - 1 : $this_value['leaves_element'];
-                $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this->_col + $this->_colSpanMax + $colMerge, $this_value['row'] + 1);
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this->_col + $this->_colSpanMax + $colMerge, $this_value['row'] + 1)->applyFromArray($this->styleX());
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 2, $this->_col + $this->_colSpanMax, $this->_rowSpanMax)->applyFromArray($this->styleXFix());
+                $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this->_col + $this->_colSpanMax + $colMerge, $this_value['row'] + 1]);
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this->_col + $this->_colSpanMax + $colMerge, $this_value['row'] + 1])->applyFromArray($this->styleX());
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 2, $this->_col + $this->_colSpanMax, $this->_rowSpanMax])->applyFromArray($this->styleXFix());
 
                 //$this->spreadsheet->getActiveSheet()->getRowDimensions($this_value['row'] + 1)->setRowHeight(10);
 
-                $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1, $rcCode, DataType::TYPE_STRING);
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1)->applyFromArray($this->styleRC());
+                $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1], $rcCode, DataType::TYPE_STRING);
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1])->applyFromArray($this->styleRC());
 
                 $this->_col = $this->_col + 1;
             else:
@@ -394,22 +394,22 @@ class RenderOutput
                     $this_value['leaves_element'] = $this_value['metric_element'];
                 endif;
 
-                $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $lebelName);
+                $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$this->_col + $this->_colSpanMax, $this_value['row'] + 1], $lebelName);
 
                 $rowspan =
                     (isset($this_value['leaves_element']) || ($this->_rowSpanMax - 1) == $this_value['row']) ? 1 : $this->_rowSpanMax - $this_value['row'];
                 $colspan = (isset($this_value['leaves_element']) ? ($this_value['leaves_element'] - 1) : 0);
 
-                $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $colspan + $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan)
-                    ->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan)->applyFromArray($this->styleX());
+                $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $colspan + $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan])
+                    ->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan])->applyFromArray($this->styleX());
 
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $colspan + $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan)->applyFromArray($this->styleX());
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this_value['row'] + 1, $colspan + $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan)->getAlignment()->setWrapText(true);
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $colspan + $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan])->applyFromArray($this->styleX());
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this_value['row'] + 1, $colspan + $this->_col + $this->_colSpanMax, $this_value['row'] + $rowspan])->getAlignment()->setWrapText(true);
 
                 $this->spreadsheet->getActiveSheet()->getRowDimension($this_value['row'] + $rowspan)->setRowHeight(70);
 
-                $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1, $rcCode, DataType::TYPE_STRING);
-                $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1)->applyFromArray($this->styleRC());
+                $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1], $rcCode, DataType::TYPE_STRING);
+                $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_col + $this->_colSpanMax, $this->_rowSpanMax + 1])->applyFromArray($this->styleRC());
 
             endif;
 
@@ -451,7 +451,7 @@ class RenderOutput
 
         else:
             return $z;
-            //$this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow(1, 3, 2 + $this->_col, 3);
+            //$this->spreadsheet->setActiveSheetIndex($s)->mergeCells([1, 3, 2 + $this->_col, 3]);
         endif;
     }
 
@@ -478,7 +478,7 @@ class RenderOutput
                 endif;
             endforeach;
 
-            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 3, $zContent)->mergeCellsByColumnAndRow(1, 3, 2 + $this->_col, 3);
+            $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, 3], $zContent)->mergeCells([1, 3, 2 + $this->_col, 3]);
 
         elseif (isset($this->breakdownTreeArc['z'])):
 
@@ -494,11 +494,11 @@ class RenderOutput
                 endif;
             endforeach;
 
-            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 3, $zContent)->mergeCellsByColumnAndRow(1, 3, 2 + $this->_col, 3);
+            $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, 3], $zContent)->mergeCells([1, 3, 2 + $this->_col, 3]);
 
         else:
 
-            $this->spreadsheet->setActiveSheetIndex($s)->mergeCellsByColumnAndRow(1, 3, $this->_col + $this->_colSpanMax, 3);
+            $this->spreadsheet->setActiveSheetIndex($s)->mergeCells([1, 3, $this->_col + $this->_colSpanMax, 3]);
         endif;
     }
 
@@ -534,25 +534,24 @@ class RenderOutput
                 endif;
 
                 if ($row['abstract'] == 'true'):
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($_col, $_row, $str)->
-                    mergeCellsByColumnAndRow($_col, $_row, 2 + $this->_col, $_row)->getStyleByColumnAndRow($_col, $_row, 2 + $this->_col, $_row)->applyFromArray($this->abstractYBold());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$_col, $_row], $str)->mergeCells([$_col, $_row, 2 + $this->_col, $_row])->getStyle([$_col, $_row, 2 + $this->_col, $_row])->applyFromArray($this->abstractYBold());
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->abstractYBold());
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$_col, $_row])->applyFromArray($this->abstractYBold());
 
                 elseif ($bold == TRUE):
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1 + $_col, $_row, $str)->getStyleByColumnAndRow(1 + $_col, $_row)->applyFromArray($this->abstractYBold());
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($_col, $_row, $rcCode, DataType::TYPE_STRING)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->styleRC());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1 + $_col, $_row], $str)->getStyle([1 + $_col, $_row])->applyFromArray($this->abstractYBold());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$_col, $_row], $rcCode, DataType::TYPE_STRING)->getStyle([$_col, $_row])->applyFromArray($this->styleRC());
                 else:
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1 + $_col, $_row, $str)->getStyleByColumnAndRow(1 + $_col, $_row)->applyFromArray($this->styleY());
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($_col, $_row, $rcCode, DataType::TYPE_STRING)->getStyleByColumnAndRow($_col, $_row)->applyFromArray($this->styleRC());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1 + $_col, $_row], $str)->getStyle([1 + $_col, $_row])->applyFromArray($this->styleY());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$_col, $_row], $rcCode, DataType::TYPE_STRING)->getStyle([$_col, $_row])->applyFromArray($this->styleRC());
 
                 endif;
 
                 //$this->spreadsheet->setActiveSheetIndex($s)->getColumnDimensionByColumn($_col)->setAutoSize(true);
                 //$this->spreadsheet->setActiveSheetIndex($s)->getColumnDimensionByColumn(1 + $_col)->setAutoSize(true);
-                // $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow(2, $key + $this->_rowSpanMax + 2)->applyFromArray($styleY);
+                // $this->spreadsheet->setActiveSheetIndex($s)->getStyle([2, $key + $this->_rowSpanMax + 2])->applyFromArray($styleY);
 
 
                 $y++;
@@ -600,14 +599,14 @@ class RenderOutput
 
                 if ($disabled == 'disabled'):
                     if ($row['abstract'] == 'true'):
-                        $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_colSpanMax + $x, $this->_rowSpanMax + $y)->applyFromArray($this->abstractDisable());
+                        $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_colSpanMax + $x, $this->_rowSpanMax + $y])->applyFromArray($this->abstractDisable());
                     else:
 
-                        $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_colSpanMax + $x, $this->_rowSpanMax + $y)->applyFromArray($this->styleDisable());
+                        $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_colSpanMax + $x, $this->_rowSpanMax + $y])->applyFromArray($this->styleDisable());
                     endif;
                 else:
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($this->_colSpanMax + $x, $this->_rowSpanMax + $y)->applyFromArray($this->styleY());
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$this->_colSpanMax + $x, $this->_rowSpanMax + $y])->applyFromArray($this->styleY());
                     $value = (isset($this->import[$name])) ? $this->import[$name] : "";
                     if (isset($def['type_metric'])):
 
@@ -695,8 +694,8 @@ class RenderOutput
                 $dimArr = json_decode($dim, TRUE);
                 if (isset($this->_col['labelName']) && !isset($dimArr['metric'])):
                     //open table polja koja se popunjavaju
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($x, $this->_rowSpanMax + 1, $this->_col['labelName']);
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $this->_rowSpanMax + 1)->applyFromArray($this->styleX());
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $this->_rowSpanMax + 1], $this->_col['labelName']);
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $this->_rowSpanMax + 1])->applyFromArray($this->styleX());
                 endif;
                 $_dim = json_decode($dim, true);
 
@@ -711,22 +710,22 @@ class RenderOutput
                         if (isset($this->_col['explicitDimension'])):
 
                             $con = Data::getSelectedValue($this->_col['explicitDimension'], $value['string']);
-                            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($x, $this->_rowSpanMax + $y + 1, $con, DataType::TYPE_STRING);
+                            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$x, $this->_rowSpanMax + $y + 1], $con, DataType::TYPE_STRING);
 
                         else:
 
-                            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($x, $this->_rowSpanMax + $y + 1, $value['string'], DataType::TYPE_STRING);
+                            $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$x, $this->_rowSpanMax + $y + 1], $value['string'], DataType::TYPE_STRING);
 
 
                         endif;
-                        $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $this->_rowSpanMax + $y + 1)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                        $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $this->_rowSpanMax + $y + 1])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
                     endif;
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $this->_rowSpanMax + $y + 1)->applyFromArray($this->styleY());
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $this->_rowSpanMax + $y + 1])->applyFromArray($this->styleY());
                 else:
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $this->_rowSpanMax + $y + 1)->applyFromArray($this->styleY());
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $this->_rowSpanMax + $y + 1])->applyFromArray($this->styleY());
                     if (isset($def['type_metric'])):
                         $this->typeMetric($def, $x, $this->_rowSpanMax + $y + 1, $value, $s);
 
@@ -747,8 +746,8 @@ class RenderOutput
 
     private function drawFooter($x, $y, $s)
     {
-        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, $y + 1, "© Areport")->mergeCellsByColumnAndRow(1, $y + 1, $x, $y + 1);
-        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, $y + 2, 'Date: ' . date('d.m.Y'))->mergeCellsByColumnAndRow(1, $y + 2, $x, $y + 2);
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, $y + 1], "© Areport")->mergeCells([1, $y + 1, $x, $y + 1]);
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, $y + 2], 'Date: ' . date('d.m.Y'))->mergeCells([1, $y + 2, $x, $y + 2]);
 
     }
 
@@ -756,8 +755,8 @@ class RenderOutput
     {
 
         $offsetMerge = (isset($this->_aspectNode['y'])) ? count($this->col) : 2 + $this->_col;
-        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 1, $this->tableVerboseName())->mergeCellsByColumnAndRow(1, 1, $offsetMerge, 1);
-        $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow(1, 2, 'Period: ' . $this->additionalData['period'])->mergeCellsByColumnAndRow(1, 2, $offsetMerge, 2);
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, 1], $this->tableVerboseName())->mergeCells([1, 1, $offsetMerge, 1]);
+        $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([1, 2], 'Period: ' . $this->additionalData['period'])->mergeCells([1, 2, $offsetMerge, 2]);
 
     }
 
@@ -768,8 +767,8 @@ class RenderOutput
 
                 case 'xbrli:monetaryItemType':
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($x, $y, $value['integer']);
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $y)->getNumberFormat()->setFormatCode('#,##0');
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $y], $value['integer']);
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getNumberFormat()->setFormatCode('#,##0');
 
 
                     break;
@@ -784,15 +783,15 @@ class RenderOutput
 
                     endforeach;
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($x, $y, $value, DataType::TYPE_STRING);
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$x, $y], $value, DataType::TYPE_STRING);
                     $this->spreadsheet->setActiveSheetIndex($s)->getColumnDimensionByColumn($x)->setAutoSize(TRUE);
 
                     break;
                 case 'num:percentItemType':
                     $procent = str_replace('.', ',', $value['string']);
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $y)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE);
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($x, $y, $procent);
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $y)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE);
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $y], $procent);
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                     break;
                 case 'xbrli:booleanItemType':
 
@@ -803,16 +802,16 @@ class RenderOutput
                     else:
                         $value = '';
                     endif;
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($x, $y, $value);
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $y], $value);
                     break;
                 case 'xbrli:stringItemType':
 
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicitByColumnAndRow($x, $y, $value['string'], DataType::TYPE_STRING);
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueExplicit([$x, $y], $value['string'], DataType::TYPE_STRING);
                     $this->spreadsheet->setActiveSheetIndex($s)->getColumnDimensionByColumn($x)->setAutoSize(TRUE);
                     break;
                 default :
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValueByColumnAndRow($x, $y, $value['string']);
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyleByColumnAndRow($x, $y)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $y], $value['string']);
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
                     break;
             endswitch;
         endif;
