@@ -694,6 +694,12 @@ class RenderHtmlTable
         return $html;
     }
 
+    /** A stored value inside a single-quoted HTML attribute: typed by the reporter, so escaped. */
+    private static function attr($value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
     private function getValue($name, $type, $dim)
     {
 
@@ -771,7 +777,7 @@ class RenderHtmlTable
             switch ($def['type_metric']):
 
                 case 'xbrli:monetaryItemType':
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter an integer value'  name='" . $name . "[value]' type='number'  value='$value' class='xbrl-input' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter an integer value'  name='" . $name . "[value]' type='number'  value='" . self::attr($value) . "' class='xbrl-input' />";
                     break;
                 case 'xbrli:QNameItemType':
                 case 'enum:enumerationItemType':
@@ -787,7 +793,7 @@ class RenderHtmlTable
                     endif;
                     break;
                 case 'num:percentItemType':
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . "  step='.01' id='$name' pattern='[0-9]+(,[0-9]{2})%' title='The percentage must be in the following format (eg 10.00%) with two decimal places'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input percent' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . "  step='.01' id='$name' pattern='[0-9]+(,[0-9]{2})%' title='The percentage must be in the following format (eg 10.00%) with two decimal places'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input percent' />";
                     break;
                 case 'xbrli:booleanItemType':
 
@@ -802,24 +808,24 @@ class RenderHtmlTable
 
                 case 'xbrli:stringItemType':
 
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input-text' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input-text' />";
                     break;
                 case 'xbrli:dateItemType':
 
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input datepicker' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input datepicker' />";
                     break;
                 case 'xbrli:integerItemType':
                 case 'xbrli:nonNegativeIntegerItemType':
 
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter a whole number' name='" . $name . "[value]' type='number' step='1' value='$value' class='xbrl-input' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter a whole number' name='" . $name . "[value]' type='number' step='1' value='" . self::attr($value) . "' class='xbrl-input' />";
                     break;
                 case 'xbrli:decimalItemType':
 
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input-decimal' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input-decimal' />";
                     break;
 
                 default :
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='$value' class='xbrl-input-text' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input-text' />";
             endswitch;
 
 
@@ -863,19 +869,19 @@ class RenderHtmlTable
                 // DPM 2.0: typed (open) axis renders by its typed-domain base type.
                 switch ($additional['typedBase'] ?? null):
                     case 'date':
-                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='text' value='$value' class='xbrl-input xbrl-input-open datepicker' />";
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='text' value='" . self::attr($value) . "' class='xbrl-input xbrl-input-open datepicker' />";
                         break;
                     case 'integer':
-                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='number' step='1' value='$value' class='xbrl-input xbrl-input-open' />";
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='number' step='1' value='" . self::attr($value) . "' class='xbrl-input xbrl-input-open' />";
                         break;
                     case 'decimal':
-                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='number' step='any' value='$value' class='xbrl-input xbrl-input-open' />";
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' type='number' step='any' value='" . self::attr($value) . "' class='xbrl-input xbrl-input-open' />";
                         break;
                     case 'boolean':
                         $input .= "<select class='xbrl-select xbrl-input-open' id='$name' name='" . $name . "[value]'><option></option><option " . (('true' === $value) ? "selected='selected'" : "") . " value='true'>Yes</option><option " . (('false' === $value) ? "selected='selected'" : "") . " value='false'>No</option></select>";
                         break;
                     default:
-                        $input .= "<input $ro id='$name' name='" . $name . "[value]' value='$value' class='xbrl-input-open' />";
+                        $input .= "<input $ro id='$name' name='" . $name . "[value]' value='" . self::attr($value) . "' class='xbrl-input-open' />";
                 endswitch;
 
             endif;

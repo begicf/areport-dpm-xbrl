@@ -335,7 +335,7 @@ class CreateXBRLFromDB extends XMLWriter
         $this->writeAttribute(
             'scheme', $this->entityIdentifierScheme()
         );
-        $this->writeRaw($this->normalizeEntityIdentifierValue($this->organisation));
+        $this->text((string) $this->normalizeEntityIdentifierValue($this->organisation));
         $this->endElement();
         $this->endElement();
 
@@ -399,7 +399,7 @@ class CreateXBRLFromDB extends XMLWriter
                     $this->writeAttribute(
                         'scheme', $this->entityIdentifierScheme()
                     );
-                    $this->writeRaw($this->normalizeEntityIdentifierValue($this->organisation));
+                    $this->text((string) $this->normalizeEntityIdentifierValue($this->organisation));
                     $this->endElement();
                     $this->endElement();
 
@@ -417,7 +417,7 @@ class CreateXBRLFromDB extends XMLWriter
                             if ($member['type'] === 'explicit') {
                                 $this->startElementNS('xbrldi', 'explicitMember', NULL);
                                 $this->writeAttribute('dimension', $member['dimension']);
-                                $this->writeRaw($member['value']);
+                                $this->text((string) $member['value']);
                                 $this->endElement();
                                 continue;
                             }
@@ -428,7 +428,7 @@ class CreateXBRLFromDB extends XMLWriter
                             $typMember = explode(':', $member['typed']['typ']);
 
                             $this->startElementNS($typMember[0], $typMember[1], NULL);
-                            $this->writeRaw($member['typed']['value']);
+                            $this->text((string) $member['typed']['value']);
                             $this->endElement();
                             $this->endElement();
                         endforeach;
@@ -468,21 +468,21 @@ class CreateXBRLFromDB extends XMLWriter
                             $currency = preg_match('/^[A-Z]{3}$/', (string) $row['sheetcode']) ? $row['sheetcode'] : $this->defaultMI;
                             $this->writeAttribute('decimals', (string) $this->options['decimalsMonetary']);
                             $this->writeAttribute('unitRef', 'u' . $currency);
-                            $this->writeRaw(FactValue::forKind('monetary', $row['numeric_value'], (int) $this->options['monetaryScale']));
+                            $this->text((string) FactValue::forKind('monetary', $row['numeric_value'], (int) $this->options['monetaryScale']));
                             break;
                         case 'upure':
                             $format = $this->unit[$row['metric']]['format'];
                             $decimals = ['pi' => 'decimalsPercentage', 'int' => 'decimalsInteger', 'dec' => 'decimalsDecimal'][$format];
                             $this->writeAttribute('decimals', (string) $this->options[$decimals]);
                             $this->writeAttribute('unitRef', 'uPURE');
-                            $this->writeRaw(FactValue::forKind(['pi' => 'percentage', 'int' => 'integer', 'dec' => 'decimal'][$format], $row['numeric_value']));
+                            $this->text((string) FactValue::forKind(['pi' => 'percentage', 'int' => 'integer', 'dec' => 'decimal'][$format], $row['numeric_value']));
                             break;
                         default:
-                            $this->writeRaw($row['string_value']);
+                            $this->text((string) $row['string_value']);
                             break;
                     endswitch;
                 else:
-                    $this->writeRaw($row['string_value']);
+                    $this->text((string) $row['string_value']);
                 endif;
 
 
@@ -529,7 +529,7 @@ class CreateXBRLFromDB extends XMLWriter
                 $this->writeAttribute('find:filed', 'false');
             endif;
             $this->writeAttribute('contextRef', 'cfi');
-            $this->writeRaw($key);
+            $this->text((string) $key);
             $this->endElement();
         endforeach;
 
