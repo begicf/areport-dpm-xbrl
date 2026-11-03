@@ -96,6 +96,13 @@ class TableLinkbase implements XbrlInterface {
 
         endforeach;
 
+        // Siblings are laid out by their arcs' order, not by where the arcs stand in the
+        // file (MICA Q_09.01 lists rows 0010, 0070, 0050… in the file). Stable: equal
+        // or missing orders keep the file's order.
+        if (isset($this->table['definitionNodeSubtreeArc'])) {
+            uasort($this->table['definitionNodeSubtreeArc'], fn ($a, $b) => (float) ($a['order'] ?: 0) <=> (float) ($b['order'] ?: 0));
+        }
+
 
         $tableBreakdownArc = $xpath->query("//table:tableBreakdownArc", $context);
 

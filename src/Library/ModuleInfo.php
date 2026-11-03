@@ -41,7 +41,8 @@ class ModuleInfo
             if ($code === null && !empty($table['template'])) {
                 $code = str_replace('-', '.', $table['template']);
             }
-            if ($code === null) {
+            // The xBRL-CSV report's own parts, not templates: they carry no filing indicator.
+            if ($code === null || in_array($code, ['FilingIndicators', 'FootNotes'], true)) {
                 continue;
             }
             $indicators[$code][] = strtolower(pathinfo((string) ($table['url'] ?? ''), PATHINFO_FILENAME));

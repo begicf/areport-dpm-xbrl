@@ -788,9 +788,11 @@ class RenderOutput
 
                     break;
                 case 'num:percentItemType':
-                    $procent = str_replace('.', ',', $value['string']);
-                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE);
-                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $y], $procent);
+                    // Entered as percentage points (12.5); a % cell holds the ratio (0.125) and shows 12.50%.
+                    // Reading the workbook back multiplies by 100 again (ExcelCodeImport).
+                    $points = $value['string'] ?? '';
+                    $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
+                    $this->spreadsheet->setActiveSheetIndex($s)->setCellValue([$x, $y], is_numeric($points) ? ((float) $points) / 100 : $points);
                     $this->spreadsheet->setActiveSheetIndex($s)->getStyle([$x, $y])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                     break;
                 case 'xbrli:booleanItemType':

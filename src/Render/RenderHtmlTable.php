@@ -777,7 +777,7 @@ class RenderHtmlTable
             switch ($def['type_metric']):
 
                 case 'xbrli:monetaryItemType':
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Enter an integer value'  name='" . $name . "[value]' type='number'  value='" . self::attr($value) . "' class='xbrl-input' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='An amount, e.g. 1250000 or 1,250,000.50'  name='" . $name . "[value]' type='number'  value='" . self::attr($value) . "' class='xbrl-input' />";
                     break;
                 case 'xbrli:QNameItemType':
                 case 'enum:enumerationItemType':
@@ -793,7 +793,7 @@ class RenderHtmlTable
                     endif;
                     break;
                 case 'num:percentItemType':
-                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . "  step='.01' id='$name' pattern='[0-9]+(,[0-9]{2})%' title='The percentage must be in the following format (eg 10.00%) with two decimal places'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input percent' />";
+                    $input .= "<input  " . ((isset($readonly)) ? $readonly : "") . " id='$name' title='Percentage points: 12.5 for 12.5 %'  name='" . $name . "[value]' type='text'  value='" . self::attr($value) . "' class='xbrl-input percent' />";
                     break;
                 case 'xbrli:booleanItemType':
 
